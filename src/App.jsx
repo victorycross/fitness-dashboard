@@ -55,7 +55,7 @@ export default function App() {
   const [sessions, setSessions]       = useState([]);
   const [weights, setWeights]         = useState([]);
   const [loading, setLoading]         = useState(true);
-  const [tab, seTTab]                 = useState("workouts");
+  const [tab, setTab]                 = useState("workouts");
   const [activeSession, setActiveSession] = useState(null);
   const [adding, setAdding]           = useState(false);
   const [newSession, setNewSession]   = useState({ date: "", location: "YMCA with Susan", exercises: [{ ...EMPTY_EXERCISE }] });
