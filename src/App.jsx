@@ -1439,6 +1439,10 @@ function AdminTab({ user }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteMsg, setInviteMsg] = useState("");
 
   async function loadCodes() {
     setLoading(true);
@@ -1475,6 +1479,24 @@ function AdminTab({ user }) {
     else setCodes(cs => cs.filter(c => c.code !== code));
   }
 
+  async function sendInvite() {
+    if (!inviteEmail) return;
+    setInviteSending(true); setInviteMsg("");
+    const { data: { session } } = await supabase.auth.getSession();
+    try {
+      const res = await fetch("https://ibiszdvdhffvrissciyj.supabase.co/functions/v1/send-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ friend_email: inviteEmail, inviter_name: user.email, invite_code: inviteCode || "BETA2026" }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) { setInviteMsg(`✓ Invite sent to ${inviteEmail}`); setInviteEmail(""); setInviteCode(""); }
+      else setInviteMsg(d.error || `Error ${res.status} — check function logs`);
+    } catch (e) { setInviteMsg("Network error — try again."); }
+    setInviteSending(false);
+    setTimeout(() => setInviteMsg(""), 6000);
+  }
+
   const inp = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "8px 12px", fontSize: 13, fontFamily: "Georgia, serif", width: "100%", boxSizing: "border-box" };
   const activeCount = codes.filter(c => c.active).length;
 
@@ -1496,6 +1518,47 @@ function AdminTab({ user }) {
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 2, textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", marginTop: 3 }}>Total</div>
           </div>
         </div>
+      </div>
+
+      {/* Send Invite */}
+      <div style={{ background: "rgba(200,255,0,0.03)", border: "1px solid rgba(200,255,0,0.15)", borderRadius: 2, padding: 24, marginBottom: 16 }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 2, textTransform: "uppercase", color: "#C8FF00", marginBottom: 16 }}>Send Invite Email</div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <label htmlFor="admin-invite-email" style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 6 }}>Recipient Email</label>
+            <input
+              id="admin-invite-email"
+              type="email"
+              style={inp}
+              value={inviteEmail}
+              onChange={e => setInviteEmail(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && sendInvite()}
+              placeholder="friend@example.com"
+            />
+          </div>
+          <div style={{ flex: "0 0 160px" }}>
+            <label htmlFor="admin-invite-code-select" style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 6 }}>Invite Code</label>
+            <select
+              id="admin-invite-code-select"
+              style={{ ...inp, appearance: "none" }}
+              value={inviteCode}
+              onChange={e => setInviteCode(e.target.value)}
+            >
+              {codes.filter(c => c.active).map(c => (
+                <option key={c.code} value={c.code}>{c.code}{c.label ? ` — ${c.label}` : ""}</option>
+              ))}
+              {codes.filter(c => c.active).length === 0 && <option value="BETA2026">BETA2026</option>}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={sendInvite}
+            disabled={inviteSending || !inviteEmail}
+            style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "9px 22px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: (inviteSending || !inviteEmail) ? "default" : "pointer", opacity: (inviteSending || !inviteEmail) ? 0.4 : 1, flexShrink: 0, height: 38 }}>
+            {inviteSending ? "Sending…" : "Send Invite"}
+          </button>
+        </div>
+        {inviteMsg && <div role={inviteMsg.startsWith("✓") ? "status" : "alert"} style={{ marginTop: 12, fontSize: 12, color: inviteMsg.startsWith("✓") ? "#C8FF00" : "#f87171" }}>{inviteMsg}</div>}
       </div>
 
       {/* Add code form */}

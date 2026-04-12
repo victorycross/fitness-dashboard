@@ -25,9 +25,9 @@ Deno.serve(async (req) => {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders });
   }
 
-  let friend_email: string, inviter_name: string;
+  let friend_email: string, inviter_name: string, invite_code: string;
   try {
-    ({ friend_email, inviter_name } = await req.json());
+    ({ friend_email, inviter_name, invite_code } = await req.json());
   } catch {
     return new Response(JSON.stringify({ error: "Invalid request body" }), {
       status: 400,
@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
   const fromEmail    = Deno.env.get("RESEND_FROM_EMAIL") || "onboarding@resend.dev";
   const appUrl       = "https://fitness.brightpathtechnology.io";
   const firstName    = inviter_name?.split(" ")[0] || "A member";
+  const codeBlock    = invite_code ? invite_code.trim().toUpperCase() : "BETA2026";
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -59,9 +60,13 @@ Deno.serve(async (req) => {
       <p style="color:rgba(255,255,255,0.7);font-size:15px;line-height:1.8;margin:0 0 18px;">
         <strong style="color:#fff;">${firstName}</strong> has invited you to join <strong style="color:#fff;">Dave's Fitness</strong> — a private training dashboard for logging workouts, tracking your weight, and building a program designed entirely around your goals.
       </p>
-      <p style="color:rgba(255,255,255,0.5);font-size:14px;line-height:1.8;margin:0 0 28px;">
-        Currently in closed beta. This invite gives you access to create your account and start your first session today — for free.
+      <p style="color:rgba(255,255,255,0.5);font-size:14px;line-height:1.8;margin:0 0 20px;">
+        Currently in closed beta. Use the invite code below when you create your account.
       </p>
+      <div style="background:rgba(200,255,0,0.08);border:1px solid rgba(200,255,0,0.25);border-radius:4px;padding:16px 24px;margin-bottom:24px;text-align:center;">
+        <div style="color:rgba(255,255,255,0.5);font-family:Arial,sans-serif;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:6px;">Your invite code</div>
+        <div style="color:#C8FF00;font-family:Arial,sans-serif;font-size:28px;font-weight:900;letter-spacing:6px;">${codeBlock}</div>
+      </div>
       <a href="${appUrl}" style="display:inline-block;background:#C8FF00;color:#0e0e0e;text-decoration:none;padding:13px 30px;font-family:Arial,sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;border-radius:2px;">Create My Account →</a>
     </div>
 
