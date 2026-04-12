@@ -443,10 +443,21 @@ export default function App() {
         image_media_type = aiImage.type || "image/jpeg";
       }
       const today = new Date().toISOString().split("T")[0];
-      const { data, error: fnErr } = await supabase.functions.invoke("parse-workout", {
-        body: { description: aiText, image_base64, image_media_type, today },
-      });
-      if (fnErr) throw new Error(fnErr.message);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-workout`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ description: aiText, image_base64, image_media_type, today }),
+        }
+      );
+      if (!res.ok) throw new Error(`Function error ${res.status}: ${await res.text()}`);
+      const data = await res.json();
       if (data.error) throw new Error(data.error);
       const exercises = (data.exercises || []).map(e => ({
         name: e.name || "",
