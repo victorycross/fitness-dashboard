@@ -54,15 +54,15 @@ Deno.serve(async (req) => {
 
   const html = `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>You're invited to Dave's Fitness</title></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>You're invited to BrightPath Fitness</title></head>
 <body style="margin:0;padding:0;background:#0e0e0e;color:#ffffff;font-family:Georgia,serif;">
   <div style="max-width:540px;margin:0 auto;padding:48px 32px;">
-    <div style="color:#C8FF00;font-family:Arial,sans-serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;margin-bottom:10px;">Dave's Fitness</div>
+    <div style="color:#C8FF00;font-family:Arial,sans-serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;margin-bottom:10px;">BrightPath Fitness</div>
     <h1 style="font-family:Arial,sans-serif;font-size:30px;font-weight:900;color:#ffffff;margin:0 0 28px;line-height:1.15;">You've been invited 👋</h1>
 
     <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:30px 32px;margin-bottom:28px;">
       <p style="color:rgba(255,255,255,0.7);font-size:15px;line-height:1.8;margin:0 0 18px;">
-        <strong style="color:#fff;">${firstName}</strong> has invited you to join <strong style="color:#fff;">Dave's Fitness</strong> — a private training dashboard for logging workouts, tracking your weight, and building a program designed entirely around your goals.
+        <strong style="color:#fff;">${firstName}</strong> has invited you to join <strong style="color:#fff;">BrightPath Fitness</strong> — a private training dashboard for logging workouts, tracking your weight, and building a program designed entirely around your goals.
       </p>
       <p style="color:rgba(255,255,255,0.5);font-size:14px;line-height:1.8;margin:0 0 20px;">
         Currently in closed beta. Use the invite code below when you create your account.
@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
     body: JSON.stringify({
       from: fromEmail,
       to: friend_email,
-      subject: `${firstName} invited you to Dave's Fitness`,
+      subject: `${firstName} invited you to BrightPath Fitness`,
       html,
     }),
   });

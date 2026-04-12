@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Training Reminder</title></head>
 <body style="margin:0;padding:0;background:#0e0e0e;color:#ffffff;font-family:Georgia,serif;">
   <div style="max-width:540px;margin:0 auto;padding:48px 32px;">
-    <div style="color:#C8FF00;font-family:Arial,sans-serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;margin-bottom:10px;">Training Log</div>
+    <div style="color:#C8FF00;font-family:Arial,sans-serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;margin-bottom:10px;">BrightPath Fitness</div>
     <h1 style="font-family:Arial,sans-serif;font-size:30px;font-weight:900;color:#ffffff;margin:0 0 28px;line-height:1.15;">Hey ${name} 👋</h1>
 
     <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:30px 32px;margin-bottom:28px;">

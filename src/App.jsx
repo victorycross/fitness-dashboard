@@ -812,7 +812,7 @@ function AuthForm({ onAuth, initialMode = "login" }) {
 
         {mode === "signup" && (
           <div role="note" style={{ marginBottom: 20, padding: "12px 16px", background: "rgba(200,255,0,0.07)", border: "1px solid rgba(200,255,0,0.25)", borderRadius: 2, fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.65 }}>
-            Dave's Fitness is currently in beta — available by invite only. If you received an invite, enter your invite code below to create your account.
+            BrightPath Fitness is currently in beta — available by invite only. If you received an invite, enter your invite code below to create your account.
           </div>
         )}
 
@@ -1071,7 +1071,7 @@ function LandingPage({ onAuth }) {
           <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 16 }}>Beta Access</div>
           <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 42, fontWeight: 900, margin: "0 0 20px", color: "#fff", lineHeight: 1.05 }}>Got an invite?</h2>
           <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 16, lineHeight: 1.85, marginBottom: 40 }}>
-            Dave's Fitness is currently in closed beta. If a member has invited you, create your account below — it takes under a minute. Members can send invites directly from their Profile tab.
+            BrightPath Fitness is currently in closed beta. If a member has invited you, create your account below — it takes under a minute. Members can send invites directly from their Profile tab.
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={openSignup} style={{ ...btn,      padding: "15px 40px", fontSize: 14 }}>Create Account</button>
@@ -1086,7 +1086,7 @@ function LandingPage({ onAuth }) {
       <footer style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "32px 40px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 24 }}>
           <div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: 1, color: "#fff", marginBottom: 6 }}>Dave's Fitness</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: 1, color: "#fff", marginBottom: 6 }}>BrightPath Fitness</div>
             <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, lineHeight: 1.7 }}>© {new Date().getFullYear()} · Ontario, Canada</div>
             <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, lineHeight: 1.7, marginTop: 2 }}>
               Committed to AODA / WCAG 2.0 Level AA accessibility.
@@ -1939,9 +1939,9 @@ export default function App() {
       {/* Header */}
       <div style={{ borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "32px 40px 28px", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16 }}>
         <div>
-          <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 6 }}>Training Log</div>
+          <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 6 }}>BrightPath Fitness</div>
           <h1 style={{ margin: 0, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 48, fontWeight: 900, lineHeight: 1, letterSpacing: -1 }}>
-            {displayName}'s <span style={{ color: "#C8FF00" }}>Fitness</span>
+            {displayName}'s <span style={{ color: "#C8FF00" }}>Dashboard</span>
           </h1>
           {(primaryLocation || trainerName) && (
             <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginTop: 8, fontStyle: "italic" }}>
@@ -1957,6 +1957,7 @@ export default function App() {
               : <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700 }}>{displayName[0].toUpperCase()}</div>
             }
           </div>
+          <button onClick={signOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 2, color: "rgba(255,255,255,0.65)", padding: "9px 18px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>Sign Out</button>
           {tab === "workouts" && (
             <button onClick={() => { setAdding(true); setActiveSession(null); }} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "12px 24px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>
               + Log Session
@@ -2219,7 +2220,7 @@ export default function App() {
 
       {/* Footer */}
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 60, padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", letterSpacing: 1 }}>© {new Date().getFullYear()} Dave's Fitness · Ontario, Canada</div>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", letterSpacing: 1 }}>© {new Date().getFullYear()} BrightPath Fitness · Ontario, Canada</div>
         <button onClick={() => setShowPrivacy(true)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", fontSize: 11, cursor: "pointer", letterSpacing: 1, textDecoration: "underline", textUnderlineOffset: 3 }}>Privacy Policy</button>
       </div>
     </div>
