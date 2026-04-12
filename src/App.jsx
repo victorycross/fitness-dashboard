@@ -106,6 +106,7 @@ function AuthScreen({ onAuth }) {
       setLoading(false);
       if (e) setError(e.message);
       else if (data.user?.identities?.length === 0) setError("An account with this email already exists.");
+      else if (data.user?.confirmed_at) { onAuth(data.user); }
       else setMessage("Account created! Check your email to confirm, then log in.");
     }
   }
@@ -388,14 +389,19 @@ export default function App() {
   const loadData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    const timeout = setTimeout(() => {
+      setLoading(false);
+      setError("Loading timed out — check your connection and refresh.");
+    }, 10000);
     try {
       const [{ data: sd, error: se }, { data: wd, error: we }] = await Promise.all([
         supabase.from("workout_sessions").select("*").eq("user_id", user.id).order("date", { ascending: false }),
         supabase.from("weight_log").select("*").eq("user_id", user.id).order("date", { ascending: true }),
       ]);
+      clearTimeout(timeout);
       if (se) throw se; if (we) throw we;
       setSessions(sd || []); setWeights(wd || []);
-    } catch (e) { setError("Failed to load: " + e.message); }
+    } catch (e) { clearTimeout(timeout); setError("Failed to load: " + e.message); }
     finally { setLoading(false); }
   }, [user]);
 
@@ -413,7 +419,7 @@ export default function App() {
 
   async function saveSession() {
     if (!newSession.date || newSession.exercises.some(e => !e.name)) return;
-    const record = { id: Date.now(), user_id: user.id, date: newSession.date, label: `Session #${sessions.length + 1}`, location: newSession.location || "YMCA", exercises: newSession.exercises };
+    const record = { user_id: user.id, date: newSession.date, label: `Session #${sessions.length + 1}`, location: newSession.location || "YMCA", exercises: newSession.exercises };
     const { error: e } = await supabase.from("workout_sessions").insert(record);
     if (e) { setError("Save failed: " + e.message); return; }
     setAdding(false);
