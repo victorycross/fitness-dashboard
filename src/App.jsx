@@ -53,6 +53,105 @@ function estimateCalories(exercises, bodyweightKg) {
   }, 0));
 }
 
+// ─── Privacy Policy Modal ─────────────────────────────────────────────────────
+function PrivacyModal({ onClose }) {
+  const section = (title) => (
+    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: 3, textTransform: "uppercase", color: "#C8FF00", marginTop: 28, marginBottom: 8 }}>{title}</div>
+  );
+  const p = (text) => (
+    <p style={{ margin: "0 0 10px", fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.7 }}>{text}</p>
+  );
+  const li = (text) => (
+    <li style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.7, marginBottom: 4 }}>{text}</li>
+  );
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 200, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 16px", overflowY: "auto" }}>
+      <div style={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 2, width: "100%", maxWidth: 680, padding: "40px 48px 48px", position: "relative" }}>
+        <button onClick={onClose} style={{ position: "absolute", top: 20, right: 20, background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
+
+        <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 8 }}>Legal</div>
+        <h2 style={{ margin: "0 0 4px", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 32, fontWeight: 900, color: "#fff" }}>Privacy Policy</h2>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>Effective date: April 12, 2026 · Last updated: April 12, 2026</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 4 }}>Applies to: fitness.brightpathtechnology.io</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>Operated by: David Martin, Ontario, Canada</div>
+
+        {section("1. Overview")}
+        {p('This Privacy Policy explains how Dave\'s Fitness Dashboard ("we", "us", or "our") collects, uses, stores, and protects your personal information. This application is operated by an individual in Ontario, Canada and is governed by Canada\'s Personal Information Protection and Electronic Documents Act (PIPEDA) and applicable Ontario privacy law.')}
+        {p("By creating an account and using this application, you consent to the collection and use of your personal information as described in this policy.")}
+
+        {section("2. Information We Collect")}
+        {p("We collect only the information necessary to provide the fitness tracking service:")}
+        <ul style={{ margin: "0 0 10px", paddingLeft: 20 }}>
+          {li("Account information: email address and password (stored as a secure hash)")}
+          {li("Profile information: full name, height (cm), target BMI, trainer name and email")}
+          {li("Body metrics: weight entries (kg), body fat percentage, and dates of measurement")}
+          {li("Workout data: session dates, locations, exercises, sets, reps, weights, and estimated calorie burn")}
+          {li("Avatar image: an optional profile photo you choose to upload")}
+          {li("Usage preferences: notification settings and weekly training targets")}
+        </ul>
+        {p("We do not collect device identifiers, location data, or any information beyond what you explicitly provide.")}
+
+        {section("3. How We Use Your Information")}
+        {p("Your information is used solely to:")}
+        <ul style={{ margin: "0 0 10px", paddingLeft: 20 }}>
+          {li("Display your personal fitness dashboard and progress over time")}
+          {li("Calculate BMI, estimated calorie burn, and weekly progress against your targets")}
+          {li("Parse workout descriptions using AI (Anthropic Claude) when you use the AI Parse feature — your text or image is sent to Anthropic's API for processing and is not retained by Anthropic beyond the immediate request")}
+          {li("Send transactional emails (e.g., password reset) via Resend's SMTP service")}
+        </ul>
+        {p("We do not use your information for advertising, profiling, or any purpose beyond operating the service described above.")}
+
+        {section("4. Data Storage and Third-Party Processors")}
+        {p("Your data is stored using Supabase (database and file storage), a service operated by Supabase Inc. with infrastructure in the United States. By using this application, you acknowledge that your personal information may be transferred to and processed in the United States, a jurisdiction outside Canada. We rely on Supabase's contractual commitments to protect your data.")}
+        {p("The following third-party sub-processors may handle your data:")}
+        <ul style={{ margin: "0 0 10px", paddingLeft: 20 }}>
+          {li("Supabase Inc. (US) — database, authentication, and file storage")}
+          {li("Anthropic PBC (US) — AI-based workout parsing, when you choose to use that feature")}
+          {li("Resend Inc. (US) — transactional email delivery (password resets only)")}
+        </ul>
+        {p("No personal information is sold, rented, or shared with any other third parties.")}
+
+        {section("5. Data Retention")}
+        {p("Your data is retained for as long as your account remains active. You may delete your account at any time from the Profile tab, which permanently removes all your personal information, workout records, and weight entries from our systems. Account deletion is immediate and irreversible.")}
+
+        {section("6. Security")}
+        {p("We implement reasonable technical safeguards including: encrypted data transmission (HTTPS/TLS), bcrypt password hashing, row-level security policies that restrict database access to your own records only, and token-based authentication. No method of transmission over the internet is completely secure; we cannot guarantee absolute security.")}
+
+        {section("7. Your Rights Under PIPEDA")}
+        {p("As an individual whose personal information we hold, you have the right to:")}
+        <ul style={{ margin: "0 0 10px", paddingLeft: 20 }}>
+          {li("Access the personal information we hold about you")}
+          {li("Correct inaccurate information (via the Profile tab)")}
+          {li("Withdraw consent and request deletion of your account and all associated data (via Profile → Delete Account)")}
+          {li("Know what personal information has been collected and how it is used")}
+          {li("File a complaint with the Office of the Privacy Commissioner of Canada (OPC) at priv.gc.ca")}
+        </ul>
+
+        {section("8. Cookies and Tracking")}
+        {p("This application does not use tracking cookies, advertising pixels, or analytics services. Session tokens required for authentication are stored in browser memory and are not used for any purpose other than maintaining your login session.")}
+
+        {section("9. Children's Privacy")}
+        {p("This application is not directed to individuals under the age of 14. We do not knowingly collect personal information from children under 14. If you believe a minor has provided us with personal information, please contact us and we will delete it promptly.")}
+
+        {section("10. Changes to This Policy")}
+        {p("We may update this Privacy Policy from time to time. When we do, we will update the \"Last updated\" date above. Continued use of the application after changes constitutes acceptance of the updated policy.")}
+
+        {section("11. Contact")}
+        {p("For any privacy-related questions, to exercise your rights, or to submit a complaint, please contact:")}
+        <p style={{ margin: "0 0 4px", fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.7 }}>David Martin</p>
+        <p style={{ margin: "0 0 4px", fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.7 }}>Ontario, Canada</p>
+        <p style={{ margin: "0", fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.7 }}>Email: victorycross@gmail.com</p>
+
+        <div style={{ marginTop: 36, paddingTop: 20, borderTop: "1px solid rgba(255,255,255,0.07)", fontSize: 11, color: "rgba(255,255,255,0.25)", lineHeight: 1.6 }}>
+          This policy is governed by the laws of Ontario and Canada, including PIPEDA (S.C. 2000, c. 5). For complaints unresolved by contacting us directly, you may escalate to the Office of the Privacy Commissioner of Canada.
+        </div>
+
+        <button onClick={onClose} style={{ marginTop: 28, background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "11px 28px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>Close</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, accent }) {
   return (
@@ -84,6 +183,7 @@ function AuthScreen({ onAuth }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const strength = getStrength(password);
   const inp = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "10px 14px", fontSize: 14, fontFamily: "Georgia, serif", width: "100%", boxSizing: "border-box" };
@@ -127,6 +227,7 @@ function AuthScreen({ onAuth }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
       <div style={{ width: "100%", maxWidth: 400 }}>
         <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 8 }}>Training Log</div>
         <h1 style={{ margin: "0 0 8px", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 42, fontWeight: 900, lineHeight: 1, color: "#fff" }}>
@@ -194,6 +295,9 @@ function AuthScreen({ onAuth }) {
             </>}
             {mode !== "login" && <button onClick={() => { setMode("login"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 13, cursor: "pointer" }}>Back to sign in</button>}
           </div>
+        </div>
+        <div style={{ marginTop: 24, textAlign: "center" }}>
+          <button onClick={() => setShowPrivacy(true)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.2)", fontSize: 11, cursor: "pointer", letterSpacing: 1 }}>Privacy Policy</button>
         </div>
       </div>
     </div>
@@ -423,6 +527,7 @@ export default function App() {
   const [newWeightDate, setNewWeightDate] = useState(new Date().toISOString().split("T")[0]);
   const [toast, setToast]             = useState("");
   const [error, setError]             = useState("");
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   // Auth listener
   useEffect(() => {
@@ -614,6 +719,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0e0e0e", color: "#fff", fontFamily: "Georgia, serif", paddingBottom: 80 }}>
+      {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
 
       {toast && <div style={{ position: "fixed", bottom: 32, right: 32, background: "#C8FF00", color: "#0e0e0e", padding: "12px 24px", borderRadius: 2, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 2, zIndex: 100 }}>{toast}</div>}
       {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", padding: "12px 24px", fontSize: 13, color: "#f87171", display: "flex", justifyContent: "space-between" }}>
@@ -874,6 +980,12 @@ export default function App() {
           <ProfileTab user={user} profile={profile} onSave={p => setProfile(p)} onSignOut={signOut} />
         )}
 
+      </div>
+
+      {/* Footer */}
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 60, padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", letterSpacing: 1 }}>© {new Date().getFullYear()} Dave's Fitness · Ontario, Canada</div>
+        <button onClick={() => setShowPrivacy(true)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", fontSize: 11, cursor: "pointer", letterSpacing: 1, textDecoration: "underline", textUnderlineOffset: 3 }}>Privacy Policy</button>
       </div>
     </div>
   );
