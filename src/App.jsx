@@ -380,7 +380,7 @@ export default function App() {
     if (!user) return;
     supabase.from("profiles").select("*").eq("id", user.id).single().then(({ data }) => {
       setProfile(data);
-      if (data?.location) setNewSession(s => ({ ...s, location: `${data.trainer_name ? "YMCA with " + data.trainer_name : "YMCA"}` }));
+      if (data?.trainer_name) setNewSession(s => ({ ...s, location: "YMCA with " + data.trainer_name }));
     });
   }, [user]);
 
@@ -613,7 +613,13 @@ export default function App() {
                 <span>Under &lt;18.5</span><span>Normal 18.5–24.9</span><span>Over 25–29.9</span><span>Obese ≥30</span>
               </div>
               <div style={{ marginTop: 12, fontSize: 13, color: "rgba(255,255,255,0.6)", fontStyle: "italic", lineHeight: 1.6 }}>
-                Current BMI <span style={{ color: bmiCat.color, fontWeight: "bold" }}>{currentBMI} ({bmiCat.label})</span>. Losing <span style={{ color: "#facc15" }}>{toTarget} kg</span> reaches BMI {targetBMI} at <span style={{ color: "#C8FF00" }}>{targetKg} kg</span>.
+                Current BMI <span style={{ color: bmiCat.color, fontWeight: "bold" }}>{currentBMI} ({bmiCat.label})</span>.{" "}
+                {parseFloat(toTarget) > 0
+                  ? <>Losing <span style={{ color: "#facc15" }}>{toTarget} kg</span> reaches BMI {targetBMI} at <span style={{ color: "#C8FF00" }}>{targetKg} kg</span>.</>
+                  : parseFloat(toTarget) < 0
+                    ? <>Target reached — you're <span style={{ color: "#C8FF00" }}>{Math.abs(toTarget)} kg</span> under your BMI {targetBMI} goal.</>
+                    : <>You're exactly at your BMI {targetBMI} target of <span style={{ color: "#C8FF00" }}>{targetKg} kg</span>.</>
+                }
               </div>
             </div>
           )}
