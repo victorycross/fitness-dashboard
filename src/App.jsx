@@ -358,6 +358,7 @@ export default function App() {
   const [adding, setAdding]           = useState(false);
   const [newSession, setNewSession]   = useState({ date: "", location: "", exercises: [{ ...EMPTY_EXERCISE }] });
   const [newWeight, setNewWeight]     = useState("");
+  const [newBodyFat, setNewBodyFat]   = useState("");
   const [newWeightDate, setNewWeightDate] = useState(new Date().toISOString().split("T")[0]);
   const [toast, setToast]             = useState("");
   const [error, setError]             = useState("");
@@ -441,9 +442,10 @@ export default function App() {
   async function logWeight() {
     const kg = parseFloat(newWeight);
     if (!newWeight || isNaN(kg)) return;
-    const { error: e } = await supabase.from("weight_log").upsert({ user_id: user.id, date: newWeightDate, kg }, { onConflict: "date,user_id" });
+    const bf = newBodyFat ? parseFloat(newBodyFat) : null;
+    const { error: e } = await supabase.from("weight_log").upsert({ user_id: user.id, date: newWeightDate, kg, body_fat_pct: bf }, { onConflict: "date,user_id" });
     if (e) { setError(e.message); return; }
-    setNewWeight(""); showToast("WEIGHT LOGGED ✓"); loadData();
+    setNewWeight(""); setNewBodyFat(""); showToast("WEIGHT LOGGED ✓"); loadData();
   }
 
   async function deleteWeight(date) {
@@ -602,6 +604,9 @@ export default function App() {
             <div style={{ marginTop: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "20px 24px" }}>
               <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 14 }}>BMI Scale</div>
               <div style={{ position: "relative", height: 10, borderRadius: 5, background: "linear-gradient(to right, #60a5fa 0% 20%, #C8FF00 20% 52%, #facc15 52% 72%, #f87171 72% 100%)" }}>
+                {/* Target weight marker */}
+                <div style={{ position: "absolute", top: -6, left: bmiLeft(targetBMI), transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "6px solid transparent", borderRight: "6px solid transparent", borderTop: "10px solid #facc15" }} title={`Target BMI ${targetBMI} = ${targetKg} kg`} />
+                {/* Current weight marker */}
                 <div style={{ position: "absolute", top: -4, left: bmiLeft(currentBMI), transform: "translateX(-50%)", width: 18, height: 18, borderRadius: "50%", background: "#fff", border: "3px solid #0e0e0e", boxShadow: "0 0 0 2px " + bmiCat.color }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1 }}>
@@ -640,6 +645,10 @@ export default function App() {
                 <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Weight (kg)</label>
                 <input type="number" step="0.1" placeholder="e.g. 105.5" style={inp} value={newWeight} onChange={e => setNewWeight(e.target.value)} onKeyDown={e => e.key === "Enter" && logWeight()} />
               </div>
+              <div style={{ flex: 1, minWidth: 100 }}>
+                <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Body Fat %</label>
+                <input type="number" step="0.1" placeholder="e.g. 22.5" style={inp} value={newBodyFat} onChange={e => setNewBodyFat(e.target.value)} onKeyDown={e => e.key === "Enter" && logWeight()} />
+              </div>
               <button onClick={logWeight} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "9px 22px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", height: 38, flexShrink: 0 }}>Save</button>
             </div>
           </div>
@@ -659,6 +668,7 @@ export default function App() {
                       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14 }}>{formatDate(w.date)}</div>
                       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700 }}>{w.kg} kg</div>
                       <div style={{ fontSize: 12, color: cat.color, fontStyle: "italic" }}>BMI {b} · {cat.label}</div>
+                      {w.body_fat_pct != null && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontFamily: "'Barlow Condensed', sans-serif" }}>{w.body_fat_pct}% body fat</div>}
                       {diff !== null && <div style={{ fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", color: parseFloat(diff) < 0 ? "#C8FF00" : parseFloat(diff) > 0 ? "#f87171" : "rgba(255,255,255,0.3)" }}>{parseFloat(diff) > 0 ? "+" : ""}{diff} kg</div>}
                     </div>
                     <button onClick={() => deleteWeight(w.date)} style={{ background: "none", border: "none", color: "rgba(255,80,80,0.4)", cursor: "pointer", fontSize: 16, padding: "0 4px", flexShrink: 0 }}>×</button>
