@@ -22,7 +22,11 @@ Deno.serve(async (req) => {
 
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) {
-    return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    console.error("auth.getUser failed:", authErr?.message, authErr?.status);
+    return new Response(
+      JSON.stringify({ error: "Unauthorized", detail: authErr?.message ?? "no user returned" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   let friend_email: string, inviter_name: string, invite_code: string;

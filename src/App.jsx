@@ -1443,6 +1443,8 @@ function AdminTab({ user }) {
   const [inviteCode, setInviteCode] = useState("");
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteMsg, setInviteMsg] = useState("");
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(true);
 
   async function loadCodes() {
     setLoading(true);
@@ -1455,7 +1457,14 @@ function AdminTab({ user }) {
     setLoading(false);
   }
 
-  useEffect(() => { loadCodes(); }, []);
+  async function loadUsers() {
+    setUsersLoading(true);
+    const { data, error: e } = await supabase.rpc("get_admin_user_list");
+    if (!e) setUsers(data || []);
+    setUsersLoading(false);
+  }
+
+  useEffect(() => { loadCodes(); loadUsers(); }, []);
 
   async function addCode() {
     const code = newCode.trim().toUpperCase();
@@ -1518,6 +1527,60 @@ function AdminTab({ user }) {
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 2, textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", marginTop: 3 }}>Total</div>
           </div>
         </div>
+      </div>
+
+      {/* Users */}
+      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: 24, marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.45)" }}>
+            Accounts {!usersLoading && <span style={{ color: "#C8FF00" }}>({users.length})</span>}
+          </div>
+          <button type="button" onClick={loadUsers} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2, textTransform: "uppercase", padding: 0 }}>↻ Refresh</button>
+        </div>
+        {usersLoading ? (
+          <div style={{ color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 3 }}>LOADING…</div>
+        ) : users.length === 0 ? (
+          <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, fontStyle: "italic" }}>No accounts found.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {/* Header row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 160px 110px 110px 70px", gap: 12, padding: "6px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: 4 }}>
+              {["Account", "Joined", "Last Workout", "Last Weight", "Status"].map(h => (
+                <div key={h} style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif" }}>{h}</div>
+              ))}
+            </div>
+            {users.map(u => {
+              const lastActive = [u.last_workout, u.last_weight].filter(Boolean).sort().pop() || null;
+              const daysSince = lastActive
+                ? Math.floor((Date.now() - new Date(lastActive + "T12:00:00Z").getTime()) / 86400000)
+                : null;
+              const activeColor = daysSince === null ? "rgba(255,255,255,0.25)"
+                : daysSince <= 3 ? "#C8FF00"
+                : daysSince <= 7 ? "#facc15"
+                : "#f87171";
+              return (
+                <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 160px 110px 110px 70px", gap: 12, padding: "12px", background: "rgba(255,255,255,0.015)", borderRadius: 2, alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontSize: 13, color: "#fff", marginBottom: 2 }}>{u.name || <em style={{ color: "rgba(255,255,255,0.3)" }}>no name</em>}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{u.email}</div>
+                  </div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                    {u.joined_at ? new Date(u.joined_at).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                  </div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                    {u.last_workout ? new Date(u.last_workout + "T00:00:00").toLocaleDateString("en-CA", { month: "short", day: "numeric" }) : <span style={{ color: "rgba(255,255,255,0.2)" }}>—</span>}
+                  </div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                    {u.last_weight ? new Date(u.last_weight + "T00:00:00").toLocaleDateString("en-CA", { month: "short", day: "numeric" }) : <span style={{ color: "rgba(255,255,255,0.2)" }}>—</span>}
+                  </div>
+                  <div style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1, color: activeColor, textTransform: "uppercase" }}>
+                    {!u.onboarding_complete ? "Setup" : daysSince === null ? "No data" : daysSince === 0 ? "Today" : `${daysSince}d ago`}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Send Invite */}
