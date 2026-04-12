@@ -742,9 +742,9 @@ const CustomTooltip = ({ active, payload }) => {
   );
 };
 
-// ─── Auth Screen ──────────────────────────────────────────────────────────────
-function AuthScreen({ onAuth }) {
-  const [mode, setMode] = useState("login"); // login | signup | reset
+// ─── Auth Form (shared by full-screen + modal) ───────────────────────────────
+function AuthForm({ onAuth, initialMode = "login" }) {
+  const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
@@ -760,24 +760,19 @@ function AuthScreen({ onAuth }) {
   async function handleSubmit() {
     setError(""); setMessage("");
     if (!email) { setError("Email required."); return; }
-
     if (mode === "reset") {
       setLoading(true);
-      const { error: e } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "https://fitness.brightpathtechnology.io",
-      });
+      const { error: e } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: "https://fitness.brightpathtechnology.io" });
       setLoading(false);
       if (e) setError(e.message);
       else setMessage("Password reset link sent — check your email.");
       return;
     }
-
     if (!password) { setError("Password required."); return; }
     if (mode === "signup") {
       if (strength.score < 3) { setError("Password too weak — use 12+ chars with uppercase, number, and symbol."); return; }
       if (password !== confirmPw) { setError("Passwords don't match."); return; }
     }
-
     setLoading(true);
     if (mode === "login") {
       const { data, error: e } = await supabase.auth.signInWithPassword({ email, password });
@@ -794,80 +789,289 @@ function AuthScreen({ onAuth }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+    <div style={{ width: "100%", maxWidth: 400 }}>
       {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
-      <div style={{ width: "100%", maxWidth: 400 }}>
-        <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 8 }}>Training Log</div>
-        <h1 style={{ margin: "0 0 8px", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 42, fontWeight: 900, lineHeight: 1, color: "#fff" }}>
-          Dave's <span style={{ color: "#C8FF00" }}>Fitness</span>
-        </h1>
-        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 40, fontStyle: "italic" }}>Track your training, weight, and goals.</div>
+      <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 8 }}>Training Log</div>
+      <h1 style={{ margin: "0 0 8px", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 42, fontWeight: 900, lineHeight: 1, color: "#fff" }}>
+        Dave's <span style={{ color: "#C8FF00" }}>Fitness</span>
+      </h1>
+      <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 32, fontStyle: "italic" }}>Track your training, weight, and goals.</div>
 
-        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: 32 }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#C8FF00", marginBottom: 24 }}>
-            {mode === "login" ? "Sign In" : mode === "signup" ? "Create Account" : "Reset Password"}
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Email</label>
-            <input type="email" style={inp} value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="you@example.com" />
-          </div>
-
-          {mode !== "reset" && (
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Password</label>
-              <div style={{ position: "relative" }}>
-                <input type={showPw ? "text" : "password"} style={{ ...inp, paddingRight: 44 }} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder={mode === "signup" ? "12+ chars, uppercase, number, symbol" : "••••••••"} />
-                <button onClick={() => setShowPw(v => !v)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 13, padding: 0 }}>{showPw ? "Hide" : "Show"}</button>
-              </div>
-              {mode === "signup" && password && (
-                <div style={{ marginTop: 8 }}>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    {[1,2,3,4].map(i => (
-                      <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: strength.score >= i ? strength.color : "rgba(255,255,255,0.1)", transition: "background 0.2s" }} />
-                    ))}
-                  </div>
-                  <div style={{ fontSize: 11, color: strength.color, marginTop: 4 }}>{strength.label}</div>
-                  {strength.score < 4 && (
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
-                      {!(/[A-Z]/.test(password)) && "Add uppercase · "}
-                      {!(/[0-9]/.test(password)) && "Add number · "}
-                      {!(/[^A-Za-z0-9]/.test(password)) && "Add symbol · "}
-                      {password.length < 12 && `${12 - password.length} more chars`}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {mode === "signup" && (
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Confirm Password</label>
-              <input type={showPw ? "text" : "password"} style={{ ...inp, borderColor: confirmPw && confirmPw !== password ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.12)" }} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="••••••••" />
-              {confirmPw && confirmPw !== password && <div style={{ fontSize: 11, color: "#f87171", marginTop: 4 }}>Passwords don't match</div>}
-            </div>
-          )}
-
-          {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 2, padding: "10px 14px", fontSize: 13, color: "#f87171", marginBottom: 16 }}>{error}</div>}
-          {message && <div style={{ background: "rgba(200,255,0,0.06)", border: "1px solid rgba(200,255,0,0.2)", borderRadius: 2, padding: "10px 14px", fontSize: 13, color: "#C8FF00", marginBottom: 16 }}>{message}</div>}
-
-          <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "12px 24px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 2, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
-            {loading ? "Please wait…" : mode === "login" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Reset Link"}
-          </button>
-
-          <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
-            {mode === "login" && <>
-              <button onClick={() => { setMode("signup"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 13, cursor: "pointer" }}>Don't have an account? Sign up</button>
-              <button onClick={() => { setMode("reset"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", fontSize: 12, cursor: "pointer" }}>Forgot password?</button>
-            </>}
-            {mode !== "login" && <button onClick={() => { setMode("login"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 13, cursor: "pointer" }}>Back to sign in</button>}
-          </div>
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: 32 }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#C8FF00", marginBottom: 24 }}>
+          {mode === "login" ? "Sign In" : mode === "signup" ? "Create Account" : "Reset Password"}
         </div>
-        <div style={{ marginTop: 24, textAlign: "center" }}>
-          <button onClick={() => setShowPrivacy(true)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.2)", fontSize: 11, cursor: "pointer", letterSpacing: 1 }}>Privacy Policy</button>
+
+        {mode === "signup" && (
+          <div style={{ marginBottom: 16, padding: "10px 14px", background: "rgba(200,255,0,0.04)", border: "1px solid rgba(200,255,0,0.15)", borderRadius: 2, fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
+            Dave's Fitness is currently in beta and available by invite only. If you received an invite, create your account below.
+          </div>
+        )}
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Email</label>
+          <input type="email" style={inp} value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="you@example.com" />
+        </div>
+
+        {mode !== "reset" && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Password</label>
+            <div style={{ position: "relative" }}>
+              <input type={showPw ? "text" : "password"} style={{ ...inp, paddingRight: 44 }} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder={mode === "signup" ? "12+ chars, uppercase, number, symbol" : "••••••••"} />
+              <button onClick={() => setShowPw(v => !v)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 13, padding: 0 }}>{showPw ? "Hide" : "Show"}</button>
+            </div>
+            {mode === "signup" && password && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {[1,2,3,4].map(i => (
+                    <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: strength.score >= i ? strength.color : "rgba(255,255,255,0.1)", transition: "background 0.2s" }} />
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, color: strength.color, marginTop: 4 }}>{strength.label}</div>
+                {strength.score < 4 && (
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
+                    {!(/[A-Z]/.test(password)) && "Add uppercase · "}
+                    {!(/[0-9]/.test(password)) && "Add number · "}
+                    {!(/[^A-Za-z0-9]/.test(password)) && "Add symbol · "}
+                    {password.length < 12 && `${12 - password.length} more chars`}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {mode === "signup" && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Confirm Password</label>
+            <input type={showPw ? "text" : "password"} style={{ ...inp, borderColor: confirmPw && confirmPw !== password ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.12)" }} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="••••••••" />
+            {confirmPw && confirmPw !== password && <div style={{ fontSize: 11, color: "#f87171", marginTop: 4 }}>Passwords don't match</div>}
+          </div>
+        )}
+
+        {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 2, padding: "10px 14px", fontSize: 13, color: "#f87171", marginBottom: 16 }}>{error}</div>}
+        {message && <div style={{ background: "rgba(200,255,0,0.06)", border: "1px solid rgba(200,255,0,0.2)", borderRadius: 2, padding: "10px 14px", fontSize: 13, color: "#C8FF00", marginBottom: 16 }}>{message}</div>}
+
+        <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "12px 24px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 2, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
+          {loading ? "Please wait…" : mode === "login" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Reset Link"}
+        </button>
+
+        <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
+          {mode === "login" && <>
+            <button onClick={() => { setMode("signup"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 13, cursor: "pointer" }}>Don't have an account? Sign up</button>
+            <button onClick={() => { setMode("reset"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", fontSize: 12, cursor: "pointer" }}>Forgot password?</button>
+          </>}
+          {mode !== "login" && <button onClick={() => { setMode("login"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 13, cursor: "pointer" }}>Back to sign in</button>}
         </div>
       </div>
+
+      <div style={{ marginTop: 20, textAlign: "center" }}>
+        <button onClick={() => setShowPrivacy(true)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.2)", fontSize: 11, cursor: "pointer", letterSpacing: 1 }}>Privacy Policy</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Landing Page ─────────────────────────────────────────────────────────────
+function LandingPage({ onAuth }) {
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
+  const [showPrivacy, setShowPrivacy] = useState(false);
+
+  function openLogin()  { setAuthMode("login");  setShowAuth(true); }
+  function openSignup() { setAuthMode("signup"); setShowAuth(true); }
+
+  const FEATURES = [
+    { icon: "◈", title: "AI Workout Parser",       desc: "Describe your session in plain English or snap a photo of your notes. AI extracts every exercise, set, and rep instantly — no manual entry required." },
+    { icon: "◎", title: "Custom Program Design",    desc: "Set your workout locations, weekly targets, trainer details, and short and long-term goals. Your program, built entirely around you — not a template." },
+    { icon: "◉", title: "Weight & BMI Tracking",    desc: "Log weight and body fat percentage over time. Charts show your trajectory against your personalised target BMI, week over week." },
+    { icon: "◷", title: "Weekly Targets",           desc: "Set session and calorie targets for the week. A live progress bar and 8-week history chart keep you accountable without the noise." },
+    { icon: "◫", title: "Progress Photos",          desc: "Upload before and after photos with optional captions. Watch your transformation unfold in a private, chronological visual timeline." },
+    { icon: "◌", title: "Smart Reminders",          desc: "Opt-in email nudges when your log falls behind — sent only when you need them. One-click unsubscribe from any email, always." },
+  ];
+
+  const PLANS = [
+    { name: "Starter", price: "Free",    badge: "Active in beta",  active: true,  desc: "All core features: workout logging, weight tracking, AI parsing, goals, and progress photos." },
+    { name: "Pro",     price: "$7 / mo", badge: "Coming soon",     active: false, desc: "Advanced analytics, calendar sync, and training history exports. Launching later this year." },
+    { name: "Team",    price: "Custom",  badge: "Coming soon",     active: false, desc: "For coaches, gyms, and training groups. Shared dashboards and bulk management tools." },
+  ];
+
+  const btn      = { display: "inline-block", background: "#C8FF00", color: "#0e0e0e", border: "none", padding: "13px 32px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", borderRadius: 2 };
+  const btnGhost = { ...btn, background: "transparent", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.2)" };
+
+  return (
+    <div style={{ background: "#0e0e0e", color: "#fff", minHeight: "100vh", fontFamily: "Georgia, serif" }}>
+      {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
+
+      {/* Auth modal */}
+      {showAuth && (
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setShowAuth(false); }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, overflowY: "auto" }}
+        >
+          <div style={{ position: "relative", width: "100%", display: "flex", justifyContent: "center" }}>
+            <button onClick={() => setShowAuth(false)} style={{ position: "absolute", top: -32, right: "calc(50% - 200px)", background: "none", border: "none", color: "rgba(255,255,255,0.35)", fontSize: 12, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2, textTransform: "uppercase" }}>
+              × Close
+            </button>
+            <AuthForm onAuth={onAuth} initialMode={authMode} />
+          </div>
+        </div>
+      )}
+
+      {/* Nav */}
+      <nav style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "18px 40px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 900, letterSpacing: 1, color: "#fff" }}>Dave's <span style={{ color: "#C8FF00" }}>Fitness</span></span>
+          <span style={{ background: "rgba(200,255,0,0.1)", border: "1px solid rgba(200,255,0,0.25)", borderRadius: 20, padding: "2px 10px", fontSize: 9, color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2, textTransform: "uppercase" }}>Beta</span>
+        </div>
+        <button onClick={openLogin} style={{ ...btnGhost, padding: "9px 22px", fontSize: 12 }}>Sign In</button>
+      </nav>
+
+      {/* Hero */}
+      <section style={{ maxWidth: 960, margin: "0 auto", padding: "96px 40px 80px", textAlign: "center" }}>
+        <div style={{ display: "inline-block", background: "rgba(200,255,0,0.07)", border: "1px solid rgba(200,255,0,0.2)", borderRadius: 20, padding: "4px 16px", marginBottom: 28, fontSize: 11, color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 3, textTransform: "uppercase" }}>
+          Invite Only · Currently Free
+        </div>
+        <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: "clamp(52px, 9vw, 100px)", fontWeight: 900, lineHeight: 1.0, margin: "0 0 28px", color: "#fff", letterSpacing: -1 }}>
+          Train smarter.<br /><span style={{ color: "#C8FF00" }}>Own your progress.</span>
+        </h1>
+        <p style={{ fontSize: 18, color: "rgba(255,255,255,0.5)", lineHeight: 1.85, maxWidth: 540, margin: "0 auto 48px" }}>
+          A personal fitness dashboard built around your goals — log workouts with AI, track your weight, design your own program, and see real change over time.
+        </p>
+        <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
+          <button onClick={openSignup} style={{ ...btn, padding: "15px 40px", fontSize: 14 }}>Request Early Access</button>
+          <button onClick={openLogin}  style={{ ...btnGhost, padding: "15px 40px", fontSize: 14 }}>Sign In →</button>
+        </div>
+        <div style={{ marginTop: 28, color: "rgba(255,255,255,0.18)", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2 }}>Invite-only beta · Ontario, Canada</div>
+      </section>
+
+      {/* Features */}
+      <section style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "80px 40px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 56 }}>
+            <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 12 }}>What's Inside</div>
+            <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 40, fontWeight: 900, margin: 0, color: "#fff" }}>Built for your goals, not ours</h2>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 2 }}>
+            {FEATURES.map((f, i) => (
+              <div key={i} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", padding: "32px 28px" }}>
+                <div style={{ color: "#C8FF00", fontSize: 26, marginBottom: 14, fontFamily: "monospace", lineHeight: 1 }}>{f.icon}</div>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, letterSpacing: 0.5, marginBottom: 10, color: "#fff" }}>{f.title}</div>
+                <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, lineHeight: 1.8 }}>{f.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Custom program callout */}
+      <section style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "80px 40px", background: "rgba(200,255,0,0.015)" }}>
+        <div style={{ maxWidth: 840, margin: "0 auto", textAlign: "center" }}>
+          <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 16 }}>Design Your Program</div>
+          <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 40, fontWeight: 900, margin: "0 0 24px", color: "#fff", lineHeight: 1.1 }}>No cookie-cutter plans. Just yours.</h2>
+          <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 16, lineHeight: 1.9, marginBottom: 44, maxWidth: 620, margin: "0 auto 44px" }}>
+            Set where you train, how often you want to work out, who your trainer is, and what you're working toward — both this month and this year. Every chart and reminder adapts to the targets <em>you</em> set.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, textAlign: "left" }}>
+            {["Workout locations & gym names", "Weekly session & calorie targets", "Trainer name & contact", "Short and long-term objectives", "BMI and body composition goals", "Progress photo milestones"].map((item, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span style={{ color: "#C8FF00", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>
+                <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.65 }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Privacy */}
+      <section style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "80px 40px" }}>
+        <div style={{ maxWidth: 960, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 60, alignItems: "center" }}>
+          <div>
+            <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 16 }}>Your Privacy</div>
+            <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 36, fontWeight: 900, margin: "0 0 20px", color: "#fff", lineHeight: 1.15 }}>Your data belongs to you. Full stop.</h2>
+            <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 15, lineHeight: 1.85, marginBottom: 28 }}>
+              We collect only what you enter. We use that data for one purpose: helping you track your progress. No ads. No selling. No exceptions.
+            </p>
+            <button onClick={() => setShowPrivacy(true)} style={{ background: "none", border: "1px solid rgba(200,255,0,0.3)", borderRadius: 2, color: "#C8FF00", padding: "9px 20px", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2, textTransform: "uppercase" }}>Read Privacy Policy</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {[
+              { icon: "◈", title: "No ads, ever",              desc: "We don't sell your data or run advertising. Your workouts are not a product." },
+              { icon: "◎", title: "No third-party sharing",    desc: "Your personal information is never sold, rented, or shared with outside parties." },
+              { icon: "◉", title: "PIPEDA compliant",          desc: "Collected and stored in compliance with Canada's federal privacy law for personal data." },
+              { icon: "◌", title: "Delete anytime",            desc: "Permanently delete your account and all data at any time — no waiting, no questions." },
+            ].map((item, i) => (
+              <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                <div style={{ color: "#C8FF00", fontSize: 18, flexShrink: 0, marginTop: 2, fontFamily: "monospace" }}>{item.icon}</div>
+                <div>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, marginBottom: 3, color: "#fff" }}>{item.title}</div>
+                  <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, lineHeight: 1.7 }}>{item.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "80px 40px", background: "rgba(255,255,255,0.01)" }}>
+        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 56 }}>
+            <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 12 }}>Pricing</div>
+            <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 40, fontWeight: 900, margin: "0 0 12px", color: "#fff" }}>Simple plans, no surprises</h2>
+            <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 14, fontStyle: "italic" }}>All features are free during the beta period.</div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 2 }}>
+            {PLANS.map((plan, i) => (
+              <div key={i} style={{ background: plan.active ? "rgba(200,255,0,0.035)" : "rgba(255,255,255,0.02)", border: `1px solid ${plan.active ? "rgba(200,255,0,0.2)" : "rgba(255,255,255,0.06)"}`, padding: "36px 28px", position: "relative" }}>
+                <div style={{ position: "absolute", top: 16, right: 16, background: plan.active ? "rgba(200,255,0,0.1)" : "rgba(255,255,255,0.05)", border: `1px solid ${plan.active ? "rgba(200,255,0,0.25)" : "rgba(255,255,255,0.08)"}`, borderRadius: 20, padding: "2px 10px", fontSize: 9, color: plan.active ? "#C8FF00" : "rgba(255,255,255,0.25)", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2, textTransform: "uppercase" }}>{plan.badge}</div>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 24, fontWeight: 900, letterSpacing: 1, marginBottom: 6, color: "#fff" }}>{plan.name}</div>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 34, fontWeight: 700, color: plan.active ? "#C8FF00" : "rgba(255,255,255,0.2)", marginBottom: 16 }}>{plan.price}</div>
+                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, lineHeight: 1.75, marginBottom: 28 }}>{plan.desc}</div>
+                <button onClick={plan.active ? openSignup : undefined} disabled={!plan.active} style={{ ...btn, width: "100%", textAlign: "center", opacity: plan.active ? 1 : 0.25, cursor: plan.active ? "pointer" : "default" }}>
+                  {plan.active ? "Get Started" : "Coming Soon"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Invite / CTA */}
+      <section style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "80px 40px", textAlign: "center" }}>
+        <div style={{ maxWidth: 580, margin: "0 auto" }}>
+          <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 16 }}>Beta Access</div>
+          <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 42, fontWeight: 900, margin: "0 0 20px", color: "#fff", lineHeight: 1.05 }}>Got an invite?</h2>
+          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 16, lineHeight: 1.85, marginBottom: 40 }}>
+            Dave's Fitness is currently in closed beta. If a member has invited you, create your account below — it takes under a minute. Members can send invites directly from their Profile tab.
+          </p>
+          <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
+            <button onClick={openSignup} style={{ ...btn,      padding: "15px 40px", fontSize: 14 }}>Create Account</button>
+            <button onClick={openLogin}  style={{ ...btnGhost, padding: "15px 40px", fontSize: 14 }}>Sign In →</button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "24px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: 1, color: "#fff" }}>Dave's Fitness</span>
+          <span style={{ color: "rgba(255,255,255,0.18)", fontSize: 11 }}>© {new Date().getFullYear()} · Ontario, Canada</span>
+        </div>
+        <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+          <button onClick={() => setShowPrivacy(true)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>Privacy Policy</button>
+          <button onClick={openLogin} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", fontSize: 12, cursor: "pointer" }}>Sign In</button>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// ─── Auth Screen (full-page fallback) ─────────────────────────────────────────
+function AuthScreen({ onAuth }) {
+  return (
+    <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <AuthForm onAuth={onAuth} />
     </div>
   );
 }
@@ -899,7 +1103,26 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
   const [showPw, setShowPw] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteMsg, setInviteMsg] = useState("");
   const strength = getStrength(newPw);
+
+  async function sendInvite() {
+    if (!inviteEmail) return;
+    setInviteSending(true); setInviteMsg("");
+    const { data: { session } } = await supabase.auth.getSession();
+    try {
+      const res = await fetch("https://ibiszdvdhffvrissciyj.supabase.co/functions/v1/send-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ friend_email: inviteEmail, inviter_name: profile?.name }),
+      });
+      if (res.ok) { setInviteMsg("✓ Invite sent to " + inviteEmail); setInviteEmail(""); }
+      else { const d = await res.json().catch(() => ({})); setInviteMsg(d.error || "Failed to send — try again."); }
+    } catch { setInviteMsg("Network error — try again."); }
+    setInviteSending(false);
+  }
 
   function addLoc(type, label) {
     setLocations(ls => [...ls, { type, label }]);
@@ -1080,6 +1303,31 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
             }
           </div>
         </div>
+      </div>
+
+      {/* Invite a Friend */}
+      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 2, padding: 20, marginBottom: 16 }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", marginBottom: 10 }}>Invite a Friend</div>
+        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", lineHeight: 1.7, marginBottom: 14 }}>
+          Know someone who'd benefit from a private fitness dashboard? Enter their email and we'll send them a personal invite with a link to sign up.
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <input
+            type="email"
+            style={{ ...inp, flex: 1 }}
+            value={inviteEmail}
+            onChange={e => setInviteEmail(e.target.value)}
+            placeholder="friend@example.com"
+            onKeyDown={e => e.key === "Enter" && sendInvite()}
+          />
+          <button
+            onClick={sendInvite}
+            disabled={inviteSending || !inviteEmail}
+            style={{ background: "rgba(200,255,0,0.1)", border: "1px solid rgba(200,255,0,0.25)", borderRadius: 2, color: "#C8FF00", padding: "8px 18px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, textTransform: "uppercase", cursor: (inviteSending || !inviteEmail) ? "default" : "pointer", opacity: (inviteSending || !inviteEmail) ? 0.5 : 1, flexShrink: 0 }}>
+            {inviteSending ? "Sending…" : "Send Invite"}
+          </button>
+        </div>
+        {inviteMsg && <div style={{ marginTop: 10, fontSize: 12, color: inviteMsg.startsWith("✓") ? "#C8FF00" : "#f87171" }}>{inviteMsg}</div>}
       </div>
 
       {/* Change password */}
@@ -1348,7 +1596,7 @@ export default function App() {
   // ── Render ──
   const loadingScreen = <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, letterSpacing: 4 }}>LOADING…</div>;
   if (authLoading) return loadingScreen;
-  if (!user) return <AuthScreen onAuth={u => setUser(u)} />;
+  if (!user) return <LandingPage onAuth={u => setUser(u)} />;
   if (!user.email_confirmed_at) return <ConfirmEmailScreen email={user.email} onSignOut={signOut} />;
   if (!profileLoaded) return loadingScreen;
   if (!profile?.onboarding_complete) return (
