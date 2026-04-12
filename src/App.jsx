@@ -756,7 +756,7 @@ function AuthForm({ onAuth, initialMode = "login" }) {
   const [showPrivacy, setShowPrivacy] = useState(false);
 
   const strength = getStrength(password);
-  const inp = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "10px 14px", fontSize: 14, fontFamily: "Georgia, serif", width: "100%", boxSizing: "border-box" };
+  const inp = { background: "#111", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 2, color: "#fff", padding: "10px 14px", fontSize: 14, fontFamily: "Georgia, serif", width: "100%", boxSizing: "border-box" };
 
   async function handleSubmit() {
     setError(""); setMessage("");
@@ -805,7 +805,7 @@ function AuthForm({ onAuth, initialMode = "login" }) {
       </h1>
       <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 32, fontStyle: "italic" }}>Track your training, weight, and goals.</div>
 
-      <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, padding: 32 }}>
+      <div style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, padding: 32 }}>
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#C8FF00", marginBottom: 24 }}>
           {mode === "login" ? "Sign In" : mode === "signup" ? "Create Account" : "Reset Password"}
         </div>
