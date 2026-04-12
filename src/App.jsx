@@ -442,8 +442,9 @@ export default function App() {
         image_base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
         image_media_type = aiImage.type || "image/jpeg";
       }
+      const today = new Date().toISOString().split("T")[0];
       const { data, error: fnErr } = await supabase.functions.invoke("parse-workout", {
-        body: { description: aiText, image_base64, image_media_type },
+        body: { description: aiText, image_base64, image_media_type, today },
       });
       if (fnErr) throw new Error(fnErr.message);
       if (data.error) throw new Error(data.error);

@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { description, image_base64, image_media_type } = await req.json();
+    const { description, image_base64, image_media_type, today } = await req.json();
 
     if (!description && !image_base64) {
       return new Response(JSON.stringify({ error: "Provide a description or image." }), {
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
     content.push({
       type: "text",
-      text: description || "Extract all exercises from this image.",
+      text: (today ? `Today's date is ${today}.\n\n` : "") + (description || "Extract all exercises from this image."),
     });
 
     const response = await client.messages.create({
