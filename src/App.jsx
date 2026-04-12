@@ -120,15 +120,14 @@ function AuthScreen({ onAuth }) {
         <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 40, fontStyle: "italic" }}>McDonald YMCA · Trainer: Susan Jadidi</div>
 
         <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: 32 }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-seref", fontSize: 18, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#C8FF00", marginBottom: 24 }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#C8FF00", marginBottom: 24 }}>
             {mode === "login" ? "Sign In" : mode === "signup" ? "Create Account" : "Reset Password"}
           </div>
 
           <div style={{ marginBottom: 16 }}>
-   <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Email</label>
-               <input type="email" style={inp} value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="you@example.com" />
-             </div>
+            <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Email</label>
+            <input type="email" style={inp} value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="you@example.com" />
+          </div>
 
           {mode !== "reset" && (
             <div style={{ marginBottom: 16 }}>
@@ -169,7 +168,7 @@ function AuthScreen({ onAuth }) {
           {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 2, padding: "10px 14px", fontSize: 13, color: "#f87171", marginBottom: 16 }}>{error}</div>}
           {message && <div style={{ background: "rgba(200,255,0,0.06)", border: "1px solid rgba(200,255,0,0.2)", borderRadius: 2, padding: "10px 14px", fontSize: 13, color: "#C8FF00", marginBottom: 16 }}>{message}</div>}
 
-          <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "12px 24px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 2, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7  : 1 }}>
+          <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "12px 24px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 2, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
             {loading ? "Please wait…" : mode === "login" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Reset Link"}
           </button>
 
@@ -258,7 +257,7 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
           <div style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(200,255,0,0.1)", border: "2px solid rgba(200,255,0,0.3)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {avatarPreview
               ? <img src={avatarPreview} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-seref", fontSize: 32, fontWeight: 700 }}>{form.name ? form.name[0].toUpperCase() : "?"}</div>
+              : <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 32, fontWeight: 700 }}>{form.name ? form.name[0].toUpperCase() : "?"}</div>
             }
           </div>
           <label style={{ position: "absolute", bottom: 0, right: 0, background: "#C8FF00", borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>
@@ -266,7 +265,7 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
           </label>
         </div>
         <div>
-          <div style={{ color: "#fff", fontFamily: "'Barlow Condensed', sans-seref", fontSize: 24, fontWeight: 700 }}>{form.name || "Your Name"}</div>
+          <div style={{ color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 24, fontWeight: 700 }}>{form.name || "Your Name"}</div>
           <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 2 }}>{user.email}</div>
         </div>
       </div>
@@ -281,7 +280,8 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
         <div>
           <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Height (cm)</label>
           <input type="number" style={inp} value={form.height_cm} onChange={e => setForm(f => ({ ...f, height_cm: e.target.value }))} placeholder="170" />
-        </div>        {/* Target BMI */}
+        </div>
+        {/* Target BMI */}
         <div>
           <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Target BMI</label>
           <input type="number" step="0.1" style={inp} value={form.target_bmi} onChange={e => setForm(f => ({ ...f, target_bmi: e.target.value }))} placeholder="24.9" />
@@ -309,7 +309,7 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
       {/* Change password */}
       <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 2, padding: 20, marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: changePw ? 16 : 0 }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-seref", fontSize: 13, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)" }}>Password</div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)" }}>Password</div>
           <button onClick={() => setChangePw(v => !v)} style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "rgba(255,255,255,0.5)", padding: "5px 12px", fontSize: 12, cursor: "pointer" }}>{changePw ? "Cancel" : "Change"}</button>
         </div>
         {changePw && <>
@@ -338,7 +338,7 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
       {message && <div style={{ background: message.startsWith("Error") ? "rgba(248,113,113,0.1)" : "rgba(200,255,0,0.06)", border: `1px solid ${message.startsWith("Error") ? "rgba(248,113,113,0.3)" : "rgba(200,255,0,0.2)"}`, borderRadius: 2, padding: "10px 14px", fontSize: 13, color: message.startsWith("Error") ? "#f87171" : "#C8FF00", marginBottom: 16 }}>{message}</div>}
 
       <div style={{ display: "flex", gap: 12 }}>
-        <button onClick={save} disabled={saving} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "11px 28px", fontFamily: "'Barlow Condensed', sans-seref", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{saving ? "Saving…" : "Save Profile"}</button>
+        <button onClick={save} disabled={saving} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "11px 28px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{saving ? "Saving…" : "Save Profile"}</button>
         <button onClick={onSignOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "rgba(255,255,255,0.4)", padding: "11px 20px", fontSize: 13, cursor: "pointer" }}>Sign Out</button>
       </div>
     </div>
@@ -398,7 +398,7 @@ export default function App() {
     finally { setLoading(false); }
   }, [user]);
 
-  useEffect(() => { loaDData(); }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   function showToast(m) { setToast(m); setTimeout(() => setToast(""), 2500); }
 
@@ -409,6 +409,7 @@ export default function App() {
   function addExRow()       { setNewSession(s => ({ ...s, exercises: [...s.exercises, { ...EMPTY_EXERCISE }] })); }
   function removeExRow(i)   { setNewSession(s => ({ ...s, exercises: s.exercises.filter((_, idx) => idx !== i) })); }
   function updateEx(i, f, v) { setNewSession(s => { const e = [...s.exercises]; e[i] = { ...e[i], [f]: v }; return { ...s, exercises: e }; }); }
+
   async function saveSession() {
     if (!newSession.date || newSession.exercises.some(e => !e.name)) return;
     const record = { id: Date.now(), user_id: user.id, date: newSession.date, label: `Session #${sessions.length + 1}`, location: newSession.location || "YMCA", exercises: newSession.exercises };
@@ -416,13 +417,13 @@ export default function App() {
     if (e) { setError("Save failed: " + e.message); return; }
     setAdding(false);
     setNewSession({ date: "", location: profile?.trainer_name ? "YMCA with " + profile.trainer_name : "YMCA", exercises: [{ ...EMPTY_EXERCISE }] });
-    showToast("SESSION SAVED ✓"); loaDData();
+    showToast("SESSION SAVED ✓"); loadData();
   }
 
   async function deleteSession(id) {
     const { error: e } = await supabase.from("workout_sessions").delete().eq("id", id).eq("user_id", user.id);
     if (e) { setError(e.message); return; }
-    if (activeSession === id) setActiveSession(null); loaDData();
+    if (activeSession === id) setActiveSession(null); loadData();
   }
 
   // Weight helpers
@@ -442,12 +443,12 @@ export default function App() {
     if (!newWeight || isNaN(kg)) return;
     const { error: e } = await supabase.from("weight_log").upsert({ user_id: user.id, date: newWeightDate, kg }, { onConflict: "date,user_id" });
     if (e) { setError(e.message); return; }
-    setNewWeight(""); showToast("WEIGHT LOGGED ✓"); loaDData();
+    setNewWeight(""); showToast("WEIGHT LOGGED ✓"); loadData();
   }
 
   async function deleteWeight(date) {
     const { error: e } = await supabase.from("weight_log").delete().eq("date", date).eq("user_id", user.id);
-    if (e) { setError(e.message); return; } loaDData();
+    if (e) { setError(e.message); return; } loadData();
   }
 
   async function signOut() {
@@ -456,10 +457,11 @@ export default function App() {
   }
 
   const inp = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "8px 12px", fontSize: 13, fontFamily: "Georgia, serif", width: "100%" };
+
   // ── Render ──
-  if (authLoading) return <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-seref", fontSize: 18, letterSpacing: 4 }}>LOADING…</div>;
+  if (authLoading) return <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, letterSpacing: 4 }}>LOADING…</div>;
   if (!user) return <AuthScreen onAuth={u => setUser(u)} />;
-  if (loading) return <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-seref", fontSize: 18, letterSpacing: 4 }}>LOADING…</div>;
+  if (loading) return <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, letterSpacing: 4 }}>LOADING…</div>;
 
   const displayName = profile?.name || user.email.split("@")[0];
   const trainerName = profile?.trainer_name || "Susan";
@@ -467,7 +469,7 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: "#0e0e0e", color: "#fff", fontFamily: "Georgia, serif", paddingBottom: 80 }}>
 
-      {toast && <div style={{ position: "fixed", bottom: 32, right: 32, background: "#C8FF00", color: "#0e0e0e", padding: "12px 24px", borderRadius: 2, fontFamily: "'Barlow Condensed', sans-seref", fontWeight: 700, fontSize: 14, letterSpacing: 2, zIndex: 100 }}>{toast}</div>}
+      {toast && <div style={{ position: "fixed", bottom: 32, right: 32, background: "#C8FF00", color: "#0e0e0e", padding: "12px 24px", borderRadius: 2, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 2, zIndex: 100 }}>{toast}</div>}
       {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", padding: "12px 24px", fontSize: 13, color: "#f87171", display: "flex", justifyContent: "space-between" }}>
         {error}<button onClick={() => setError("")} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 16 }}>×</button>
       </div>}
@@ -475,21 +477,22 @@ export default function App() {
       {/* Header */}
       <div style={{ borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "32px 40px 28px", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16 }}>
         <div>
-          <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-seref", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 6 }}>Training Log</div>
-          <h1 style={{ margin: 0, fontFamily: "'Barlow Condensed', sans-seref", fontSize: 48, fontWeight: 900, lineHeight: 1, letterSpacing: -1 }}>
+          <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 6 }}>Training Log</div>
+          <h1 style={{ margin: 0, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 48, fontWeight: 900, lineHeight: 1, letterSpacing: -1 }}>
             {displayName}'s <span style={{ color: "#C8FF00" }}>Fitness</span>
           </h1>
           <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginTop: 8, fontStyle: "italic" }}>McDonald YMCA · Trainer: {trainerName}</div>
-        </div>        <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
           {/* Avatar */}
           <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(200,255,0,0.1)", border: "1px solid rgba(200,255,0,0.3)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} onClick={() => setTab("profile")}>
             {profile?.avatar_url
               ? <img src={profile.avatar_url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-seref", fontSize: 18, fontWeight: 700 }}>{displayName[0].toUpperCase()}</div>
+              : <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700 }}>{displayName[0].toUpperCase()}</div>
             }
           </div>
           {tab === "workouts" && (
-            <button onClick={() => { setAdding(true); setActiveSession(null); }} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "12px 24px", fontFamily: "'Barlow Condensed', sans-seref", fontWeight: 700, fontSize: 14, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>
+            <button onClick={() => { setAdding(true); setActiveSession(null); }} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "12px 24px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>
               + Log Session
             </button>
           )}
@@ -499,9 +502,10 @@ export default function App() {
       {/* Tabs */}
       <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "0 40px" }}>
         {[["workouts", "Workouts"], ["weight", "Weight & BMI"], ["profile", "Profile"]].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} style={{ background: "none", border: "none", borderBottom: tab === key ? "2px solid #C8FF00" : "2px solid transparent", color: tab === key ? "#C8FF00" : "rgba(255,255,255,0.35)", fontFamily: "'Barlow Condensed', sans-seref", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", padding: "14px 20px 12px", cursor: "pointer", marginBottom: -1 }}>{label}</button>
+          <button key={key} onClick={() => setTab(key)} style={{ background: "none", border: "none", borderBottom: tab === key ? "2px solid #C8FF00" : "2px solid transparent", color: tab === key ? "#C8FF00" : "rgba(255,255,255,0.35)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", padding: "14px 20px 12px", cursor: "pointer", marginBottom: -1 }}>{label}</button>
         ))}
       </div>
+
       <div style={{ padding: "0 40px" }}>
 
         {/* WORKOUTS TAB */}
@@ -510,12 +514,12 @@ export default function App() {
             <StatCard label="Sessions" value={sessions.length} sub="YMCA + home" />
             <StatCard label="Total Sets" value={totalSets} sub="across all sessions" />
             <StatCard label="Exercises" value={sessions.reduce((a, s) => a + (s.exercises || []).length, 0)} sub="movements logged" />
-            <StatCard label="Last Session" value={lastSession ? shortDate(lastSession.date) : "—"} sub={lastSession ? formatDate(lastSession.date): ""} />
+            <StatCard label="Last Session" value={lastSession ? shortDate(lastSession.date) : "—"} sub={lastSession ? formatDate(lastSession.date) : ""} />
           </div>
 
           {adding && (
             <div style={{ marginTop: 32, background: "rgba(200,255,0,0.04)", border: "1px solid rgba(200,255,0,0.2)", borderRadius: 2, padding: 28 }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-seref", fontSize: 18, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20, color: "#C8FF00" }}>New Session</div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20, color: "#C8FF00" }}>New Session</div>
               <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Date</label>
@@ -525,34 +529,37 @@ export default function App() {
                   <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Location</label>
                   <input type="text" style={inp} value={newSession.location} onChange={e => setNewSession(s => ({ ...s, location: e.target.value }))} placeholder="YMCA with Susan" />
                 </div>
-              </div>              <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", marginBottom: 10 }}>Exercises</div>
+              </div>
+              <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", marginBottom: 10 }}>Exercises</div>
               {newSession.exercises.map((ex, i) => (
                 <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
                   <input placeholder="Exercise name" style={{ ...inp, flex: 3, minWidth: 140 }} value={ex.name} onChange={e => updateEx(i, "name", e.target.value)} />
-                  <input placeholder="Sets"   style={{ ...inp, flex: 1, minWidth: 55 }} value={ex.sets} onChange={e => updateEx(i, "sets", e.target.value)} />
-                  <input placeholder="Reps"   style={{ ...inp, flex: 1, minWidth: 55 }} value={ex.reps} onChange={e => updateEx(i, "reps", e.target.value)} />
+                  <input placeholder="Sets"          style={{ ...inp, flex: 1, minWidth: 55 }} value={ex.sets} onChange={e => updateEx(i, "sets", e.target.value)} />
+                  <input placeholder="Reps"          style={{ ...inp, flex: 1, minWidth: 55 }} value={ex.reps} onChange={e => updateEx(i, "reps", e.target.value)} />
                   <input placeholder="Weight / Notes" style={{ ...inp, flex: 2, minWidth: 90 }} value={ex.weight} onChange={e => updateEx(i, "weight", e.target.value)} />
                   {newSession.exercises.length > 1 && <button onClick={() => removeExRow(i)} style={{ background: "none", border: "none", color: "rgba(255,80,80,0.6)", cursor: "pointer", fontSize: 18, padding: "0 4px", flexShrink: 0 }}>×</button>}
                 </div>
               ))}
               <button onClick={addExRow} style={{ background: "none", border: "1px dashed rgba(255,255,255,0.15)", borderRadius: 2, color: "rgba(255,255,255,0.4)", padding: "7px 16px", fontSize: 12, cursor: "pointer", marginTop: 4 }}>+ Add Exercise</button>
               <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-                <button onClick={saveSession} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "11px 24px", fontFamily: "'Barlow Condensed', sans-seref", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>Save Session</button>
+                <button onClick={saveSession} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "11px 24px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>Save Session</button>
                 <button onClick={() => setAdding(false)} style={{ background: "none", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 2, color: "rgba(255,255,255,0.5)", padding: "11px 20px", fontSize: 13, cursor: "pointer" }}>Cancel</button>
               </div>
             </div>
           )}
+
           <div style={{ marginTop: 36 }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-seref", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 16 }}>All Sessions</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 16 }}>All Sessions</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
               {sessions.map(session => (
                 <div key={session.id}>
                   <div onClick={() => setActiveSession(activeSession === session.id ? null : session.id)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", background: activeSession === session.id ? "rgba(200,255,0,0.06)" : "rgba(255,255,255,0.03)", border: activeSession === session.id ? "1px solid rgba(200,255,0,0.2)" : "1px solid rgba(255,255,255,0.06)", borderRadius: 2, cursor: "pointer", gap: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: "'Barlow Condensed', sans-seref", fontSize: 11, color: "#C8FF00", letterSpacing: 2, whiteSpace: "nowrap" }}>{session.label}</div>
-                      <div style={{ fontFamily: "'Barlow Condensed', sans-seref", fontSize: 17, fontWeight: 600 }}>{formatDate(session.date)}</div>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: "#C8FF00", letterSpacing: 2, whiteSpace: "nowrap" }}>{session.label}</div>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 600 }}>{formatDate(session.date)}</div>
                       <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{session.location}</div>
-                    </div>                    <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
                       <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontFamily: "'Barlow Condensed', sans-serif" }}>{(session.exercises || []).length} exercises</div>
                       <div style={{ color: "rgba(255,255,255,0.25)", fontSize: 18 }}>{activeSession === session.id ? "−" : "+"}</div>
                     </div>
@@ -561,18 +568,19 @@ export default function App() {
                     <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(200,255,0,0.1)", borderTop: "none", borderRadius: "0 0 2px 2px", padding: "4px 20px 16px" }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 12 }}>
                         <thead><tr>{["#", "Exercise", "Sets", "Reps", "Weight / Notes"].map(h => (
-                          <th key={h} style={{ textAlign: "left", fontSize: 10, letterSpacing: 2, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", padding: "6px 8px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontFamily: "'Barlow Condensed', sans-seref", fontWeight: 400 }}>{h}</th>
+                          <th key={h} style={{ textAlign: "left", fontSize: 10, letterSpacing: 2, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", padding: "6px 8px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 400 }}>{h}</th>
                         ))}</tr></thead>
                         <tbody>{(session.exercises || []).map((ex, i) => (
                           <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                             <td style={{ padding: "10px 8px", color: "rgba(255,255,255,0.25)", fontSize: 12 }}>{i + 1}</td>
                             <td style={{ padding: "10px 8px", color: "#fff", fontSize: 14 }}>{ex.name}</td>
-                            <td style={{ padding: "10px 8px", color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-seref", fontSize: 16, fontWeight: 600 }}>{ex.sets}</td>
-                            <td style={{ padding: "10px 8px", color: "rgba(255,255,255,0.7)", fontFamily: "'Barlow Condensed', sans-seref", fontSize: 16 }}>{ex.reps}</td>
+                            <td style={{ padding: "10px 8px", color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 600 }}>{ex.sets}</td>
+                            <td style={{ padding: "10px 8px", color: "rgba(255,255,255,0.7)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16 }}>{ex.reps}</td>
                             <td style={{ padding: "10px 8px", color: "rgba(255,255,255,0.7)", fontSize: 13, fontStyle: "italic" }}>{ex.weight}</td>
                           </tr>
-                        ))}</tbody></table>
-                      <button onClick={() => deleteSession(session.id)} style={{ marginTop: 12, background: "none", border: "1px solid rgba(255,60,60,0.2)", borderRadius: 2, color: "rgba(255,80,80,0.5)", padding: "6px 14px", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-seref", textTransform: "uppercase", letterSpacing: 1 }}>Delete Session</button>
+                        ))}</tbody>
+                      </table>
+                      <button onClick={() => deleteSession(session.id)} style={{ marginTop: 12, background: "none", border: "1px solid rgba(255,60,60,0.2)", borderRadius: 2, color: "rgba(255,80,80,0.5)", padding: "6px 14px", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: 1 }}>Delete Session</button>
                     </div>
                   )}
                 </div>
@@ -591,11 +599,12 @@ export default function App() {
           </div>
 
           {currentBMI && (
-            <div style={{ marginTop: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "20px 24px " }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-seref", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 14 }}>BMI Scale</div>
+            <div style={{ marginTop: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "20px 24px" }}>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 14 }}>BMI Scale</div>
               <div style={{ position: "relative", height: 10, borderRadius: 5, background: "linear-gradient(to right, #60a5fa 0% 20%, #C8FF00 20% 52%, #facc15 52% 72%, #f87171 72% 100%)" }}>
                 <div style={{ position: "absolute", top: -4, left: bmiLeft(currentBMI), transform: "translateX(-50%)", width: 18, height: 18, borderRadius: "50%", background: "#fff", border: "3px solid #0e0e0e", boxShadow: "0 0 0 2px " + bmiCat.color }} />
-              </div>              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-seref", letterSpacing: 1 }}>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1 }}>
                 <span>Under &lt;18.5</span><span>Normal 18.5–24.9</span><span>Over 25–29.9</span><span>Obese ≥30</span>
               </div>
               <div style={{ marginTop: 12, fontSize: 13, color: "rgba(255,255,255,0.6)", fontStyle: "italic", lineHeight: 1.6 }}>
@@ -605,7 +614,7 @@ export default function App() {
           )}
 
           <div style={{ marginTop: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "20px 24px" }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-seref", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 16 }}>Weight Over Time</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 16 }}>Weight Over Time</div>
             {sortedW.length > 1 ? (
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={sortedW.map(w => ({ date: shortDate(w.date), kg: w.kg }))}>
@@ -619,8 +628,9 @@ export default function App() {
               <div style={{ height: 100, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.25)", fontSize: 13, fontStyle: "italic" }}>Log a second entry to see your trend chart.</div>
             )}
           </div>
+
           <div style={{ marginTop: 20, background: "rgba(200,255,0,0.04)", border: "1px solid rgba(200,255,0,0.15)", borderRadius: 2, padding: 24 }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-seref", fontSize: 16, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16, color: "#C8FF00" }}>Log Weight</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16, color: "#C8FF00" }}>Log Weight</div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
               <div style={{ flex: 1, minWidth: 140 }}>
                 <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Date</label>
@@ -630,12 +640,12 @@ export default function App() {
                 <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Weight (kg)</label>
                 <input type="number" step="0.1" placeholder="e.g. 105.5" style={inp} value={newWeight} onChange={e => setNewWeight(e.target.value)} onKeyDown={e => e.key === "Enter" && logWeight()} />
               </div>
-              <button onClick={logWeight} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "9px 22px", fontFamily: "'Barlow Condensed', sans-seref", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", height: 38, flexShrink: 0 }}>Save</button>
+              <button onClick={logWeight} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "9px 22px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", height: 38, flexShrink: 0 }}>Save</button>
             </div>
           </div>
 
           <div style={{ marginTop: 20 }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-seref", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>History</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>History</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {[...sortedW].reverse().map((w, i) => {
                 const b = parseFloat(calcBMI(w.kg, heightM));
@@ -646,10 +656,10 @@ export default function App() {
                 return (
                   <div key={w.date} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 2 }}>
                     <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap", flex: 1 }}>
-                      <div style={{ fontFamily: "'Barlow Condensed', sans-seref", fontSize: 14 }}>{formatDate(w.date)}</div>
-                      <div style={{ fontFamily: "'Barlow Condensed', sans-seref", fontSize: 22, fontWeight: 700 }}>{w.kg} kg</div>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14 }}>{formatDate(w.date)}</div>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700 }}>{w.kg} kg</div>
                       <div style={{ fontSize: 12, color: cat.color, fontStyle: "italic" }}>BMI {b} · {cat.label}</div>
-                      {diff !== null && <div style={{ fontSize: 12, fontFamily: "'Barlow Condensed', sans-seref", color: parseFloat(diff) < 0 ? "#C8FF00" : parseFloat(diff) > 0 ? "#f87171" : "rgba(255,255,255,0.3)" }}>{parseFloat(diff) > 0 ? "+" : ""}{diff} kg</div>}
+                      {diff !== null && <div style={{ fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", color: parseFloat(diff) < 0 ? "#C8FF00" : parseFloat(diff) > 0 ? "#f87171" : "rgba(255,255,255,0.3)" }}>{parseFloat(diff) > 0 ? "+" : ""}{diff} kg</div>}
                     </div>
                     <button onClick={() => deleteWeight(w.date)} style={{ background: "none", border: "none", color: "rgba(255,80,80,0.4)", cursor: "pointer", fontSize: 16, padding: "0 4px", flexShrink: 0 }}>×</button>
                   </div>
