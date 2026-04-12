@@ -1964,7 +1964,7 @@ export default function App() {
       </div>}
 
       {/* Header */}
-      <div style={{ borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "32px 40px 28px", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16 }}>
+      <div style={{ borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "32px clamp(16px, 5vw, 40px) 28px", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16 }}>
         <div>
           <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 6 }}>BrightPath Fitness</div>
           <h1 style={{ margin: 0, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 48, fontWeight: 900, lineHeight: 1, letterSpacing: -1 }}>
@@ -1994,7 +1994,7 @@ export default function App() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "0 40px" }}>
+      <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "0 clamp(16px, 5vw, 40px)" }}>
         {[
           ["workouts", "Workouts"],
           ["weight",   "Weight & BMI"],
@@ -2006,7 +2006,7 @@ export default function App() {
         ))}
       </div>
 
-      <div style={{ padding: "0 40px" }}>
+      <div style={{ padding: "0 clamp(16px, 5vw, 40px)" }}>
 
         {/* WORKOUTS TAB */}
         {tab === "workouts" && <>
@@ -2246,7 +2246,7 @@ export default function App() {
       </div>
 
       {/* Footer */}
-      <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 60, padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 60, padding: "20px clamp(16px, 5vw, 40px)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", letterSpacing: 1 }}>© {new Date().getFullYear()} BrightPath Fitness · Ontario, Canada</div>
         <button onClick={() => setShowPrivacy(true)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", fontSize: 11, cursor: "pointer", letterSpacing: 1, textDecoration: "underline", textUnderlineOffset: 3 }}>Privacy Policy</button>
       </div>
