@@ -220,7 +220,16 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const strength = getStrength(newPw);
+
+  async function deleteAccount() {
+    setDeleting(true);
+    const { error: e } = await supabase.rpc("delete_current_user");
+    if (e) { setMessage("Error: " + e.message); setDeleting(false); setDeleteConfirm(false); return; }
+    onSignOut();
+  }
 
   const inp = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "8px 12px", fontSize: 13, fontFamily: "Georgia, serif", width: "100%", boxSizing: "border-box" };
 
@@ -371,6 +380,23 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
       <div style={{ display: "flex", gap: 12 }}>
         <button onClick={save} disabled={saving} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "11px 28px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{saving ? "Saving…" : "Save Profile"}</button>
         <button onClick={onSignOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "rgba(255,255,255,0.4)", padding: "11px 20px", fontSize: 13, cursor: "pointer" }}>Sign Out</button>
+      </div>
+
+      {/* Danger Zone */}
+      <div style={{ marginTop: 40, borderTop: "1px solid rgba(255,60,60,0.15)", paddingTop: 24 }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,80,80,0.4)", marginBottom: 12 }}>Danger Zone</div>
+        {!deleteConfirm ? (
+          <button onClick={() => setDeleteConfirm(true)} style={{ background: "none", border: "1px solid rgba(255,60,60,0.25)", borderRadius: 2, color: "rgba(255,80,80,0.5)", padding: "9px 18px", fontSize: 12, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1, textTransform: "uppercase" }}>Delete Account</button>
+        ) : (
+          <div style={{ background: "rgba(255,40,40,0.06)", border: "1px solid rgba(255,60,60,0.2)", borderRadius: 2, padding: 20 }}>
+            <div style={{ fontSize: 13, color: "#f87171", marginBottom: 4, fontWeight: "bold" }}>This cannot be undone.</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 16, lineHeight: 1.6 }}>Your account, all workout sessions, and all weight entries will be permanently deleted.</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={deleteAccount} disabled={deleting} style={{ background: "#f87171", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "9px 18px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, textTransform: "uppercase", cursor: deleting ? "default" : "pointer", opacity: deleting ? 0.7 : 1 }}>{deleting ? "Deleting…" : "Yes, delete everything"}</button>
+              <button onClick={() => setDeleteConfirm(false)} style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "rgba(255,255,255,0.4)", padding: "9px 16px", fontSize: 12, cursor: "pointer" }}>Cancel</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
