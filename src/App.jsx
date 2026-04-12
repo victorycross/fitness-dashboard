@@ -1080,41 +1080,6 @@ function LandingPage({ onAuth }) {
         </div>
       </section>
 
-      {/* Install on your phone */}
-      <section style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "80px 40px" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto" }}>
-          <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 16, textAlign: "center" }}>Install the App</div>
-          <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 42, fontWeight: 900, margin: "0 0 16px", color: "#fff", lineHeight: 1.05, textAlign: "center" }}>Add to your home screen</h2>
-          <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 15, lineHeight: 1.8, marginBottom: 48, textAlign: "center", maxWidth: 560, margin: "0 auto 48px" }}>
-            BrightPath Fitness works like a native app on iPhone and Android — no App Store required. Install it in seconds.
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
-            {/* iPhone */}
-            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "28px 32px" }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", color: "#C8FF00", marginBottom: 20 }}>iPhone (Safari)</div>
-              <ol style={{ margin: 0, paddingLeft: 18, color: "rgba(255,255,255,0.75)", fontSize: 14, lineHeight: 2.1 }}>
-                <li>Open <strong style={{ color: "#fff" }}>fitness.brightpathtechnology.io</strong> in Safari</li>
-                <li>Tap the <strong style={{ color: "#fff" }}>Share</strong> button <span style={{ color: "rgba(255,255,255,0.45)" }}>(box with arrow pointing up)</span></li>
-                <li>Scroll down and tap <strong style={{ color: "#fff" }}>Add to Home Screen</strong></li>
-                <li>Tap <strong style={{ color: "#fff" }}>Add</strong> — done</li>
-              </ol>
-              <div style={{ marginTop: 20, fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.7 }}>Must use Safari — Chrome on iOS does not support this feature.</div>
-            </div>
-            {/* Android */}
-            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "28px 32px" }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", color: "#C8FF00", marginBottom: 20 }}>Android (Chrome)</div>
-              <ol style={{ margin: 0, paddingLeft: 18, color: "rgba(255,255,255,0.75)", fontSize: 14, lineHeight: 2.1 }}>
-                <li>Open <strong style={{ color: "#fff" }}>fitness.brightpathtechnology.io</strong> in Chrome</li>
-                <li>Tap the <strong style={{ color: "#fff" }}>three-dot menu</strong> <span style={{ color: "rgba(255,255,255,0.45)" }}>(top right)</span></li>
-                <li>Tap <strong style={{ color: "#fff" }}>Add to Home screen</strong></li>
-                <li>Tap <strong style={{ color: "#fff" }}>Add</strong> — done</li>
-              </ol>
-              <div style={{ marginTop: 20, fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.7 }}>Chrome may show an install banner automatically when you visit.</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       </main>
 
       {/* Footer */}
@@ -1441,6 +1406,33 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
       <div style={{ display: "flex", gap: 12 }}>
         <button onClick={save} disabled={saving} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "11px 28px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{saving ? "Saving…" : "Save Profile"}</button>
         <button onClick={onSignOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "rgba(255,255,255,0.4)", padding: "11px 20px", fontSize: 13, cursor: "pointer" }}>Sign Out</button>
+      </div>
+
+      {/* Install on your phone */}
+      <div style={{ marginTop: 40, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 32 }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.45)", marginBottom: 20 }}>Install on Your Phone</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "20px 24px" }}>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: 2, textTransform: "uppercase", color: "#C8FF00", marginBottom: 14 }}>iPhone (Safari)</div>
+            <ol style={{ margin: 0, paddingLeft: 18, color: "rgba(255,255,255,0.7)", fontSize: 13, lineHeight: 2 }}>
+              <li>Open this site in <strong style={{ color: "#fff" }}>Safari</strong></li>
+              <li>Tap the <strong style={{ color: "#fff" }}>Share</strong> button <span style={{ color: "rgba(255,255,255,0.4)" }}>(box with arrow up)</span></li>
+              <li>Tap <strong style={{ color: "#fff" }}>Add to Home Screen</strong></li>
+              <li>Tap <strong style={{ color: "#fff" }}>Add</strong></li>
+            </ol>
+            <div style={{ marginTop: 12, fontSize: 11, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Must use Safari — Chrome on iOS does not support this.</div>
+          </div>
+          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "20px 24px" }}>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: 2, textTransform: "uppercase", color: "#C8FF00", marginBottom: 14 }}>Android (Chrome)</div>
+            <ol style={{ margin: 0, paddingLeft: 18, color: "rgba(255,255,255,0.7)", fontSize: 13, lineHeight: 2 }}>
+              <li>Open this site in <strong style={{ color: "#fff" }}>Chrome</strong></li>
+              <li>Tap the <strong style={{ color: "#fff" }}>three-dot menu</strong> <span style={{ color: "rgba(255,255,255,0.4)" }}>(top right)</span></li>
+              <li>Tap <strong style={{ color: "#fff" }}>Add to Home screen</strong></li>
+              <li>Tap <strong style={{ color: "#fff" }}>Add</strong></li>
+            </ol>
+            <div style={{ marginTop: 12, fontSize: 11, color: "rgba(255,255,255,0.3)", lineHeight: 1.6 }}>Chrome may show an install banner automatically.</div>
+          </div>
+        </div>
       </div>
 
       {/* Danger Zone */}
