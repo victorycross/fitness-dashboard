@@ -1984,11 +1984,12 @@ export default function App() {
               : <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700 }}>{displayName[0].toUpperCase()}</div>
             }
           </div>
-          <button onClick={signOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 2, color: "rgba(255,255,255,0.65)", padding: "9px 18px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>Sign Out</button>
-          {tab === "workouts" && (
+          {tab === "workouts" ? (
             <button onClick={() => { setAdding(true); setActiveSession(null); }} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "12px 24px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>
               + Log Session
             </button>
+          ) : (
+            <button onClick={signOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 2, color: "rgba(255,255,255,0.65)", padding: "9px 18px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>Sign Out</button>
           )}
         </div>
       </div>
