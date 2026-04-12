@@ -645,7 +645,7 @@ function PrivacyModal({ onClose }) {
         <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Operated by: David Martin, Ontario, Canada</div>
 
         {section("1. Overview")}
-        {p('This Privacy Policy explains how Dave\'s Fitness Dashboard ("we", "us", or "our") collects, uses, stores, and protects your personal information. This application is operated by an individual in Ontario, Canada and is governed by Canada\'s Personal Information Protection and Electronic Documents Act (PIPEDA) and applicable Ontario privacy law.')}
+        {p('This Privacy Policy explains how BrightPath Fitness ("we", "us", or "our") collects, uses, stores, and protects your personal information. This application is operated by an individual in Ontario, Canada and is governed by Canada\'s Personal Information Protection and Electronic Documents Act (PIPEDA) and applicable Ontario privacy law.')}
         {p("By creating an account and using this application, you consent to the collection and use of your personal information as described in this policy.")}
 
         {section("2. Information We Collect")}
@@ -799,9 +799,9 @@ function AuthForm({ onAuth, initialMode = "login" }) {
   return (
     <div style={{ width: "100%", maxWidth: 400 }}>
       {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
-      <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 8 }}>Training Log</div>
+      <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 8 }}>BrightPath Fitness</div>
       <h1 style={{ margin: "0 0 8px", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 42, fontWeight: 900, lineHeight: 1, color: "#fff" }}>
-        Dave's <span style={{ color: "#C8FF00" }}>Fitness</span>
+        BrightPath <span style={{ color: "#C8FF00" }}>Fitness</span>
       </h1>
       <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 32, fontStyle: "italic" }}>Track your training, weight, and goals.</div>
 
@@ -948,7 +948,7 @@ function LandingPage({ onAuth }) {
       {/* Nav */}
       <nav style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "18px 40px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 900, letterSpacing: 1, color: "#fff" }}>Dave's <span style={{ color: "#C8FF00" }}>Fitness</span></span>
+          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 900, letterSpacing: 1, color: "#fff" }}>BrightPath <span style={{ color: "#C8FF00" }}>Fitness</span></span>
           <span style={{ background: "rgba(200,255,0,0.1)", border: "1px solid rgba(200,255,0,0.25)", borderRadius: 20, padding: "2px 10px", fontSize: 9, color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2, textTransform: "uppercase" }}>Beta</span>
         </div>
         <button onClick={openLogin} style={{ ...btnGhost, padding: "9px 22px", fontSize: 12 }}>Sign In</button>
