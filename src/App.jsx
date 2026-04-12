@@ -73,6 +73,53 @@ function getLast8Weeks(sessions) {
   return result;
 }
 
+// ─── Confirm Email Screen ─────────────────────────────────────────────────────
+function ConfirmEmailScreen({ email, onSignOut }) {
+  const [resending, setResending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  async function resend() {
+    setResending(true);
+    await supabase.auth.resend({ type: "signup", email });
+    setResending(false);
+    setSent(true);
+    setTimeout(() => setSent(false), 5000);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
+        <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 12 }}>One more step</div>
+        <h1 style={{ margin: "0 0 20px", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 38, fontWeight: 900, color: "#fff", lineHeight: 1.1 }}>
+          Confirm your <span style={{ color: "#C8FF00" }}>email</span>
+        </h1>
+        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "32px 36px" }}>
+          <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.8, margin: "0 0 8px" }}>
+            We sent a confirmation link to
+          </p>
+          <p style={{ color: "#fff", fontSize: 15, fontWeight: "bold", margin: "0 0 24px" }}>{email}</p>
+          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, lineHeight: 1.7, margin: "0 0 28px" }}>
+            Click the link in that email to verify your account. Once confirmed you'll be taken straight into account setup — this page will update automatically.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+            <button onClick={resend} disabled={resending || sent}
+              style={{ background: sent ? "transparent" : "#C8FF00", color: sent ? "#C8FF00" : "#0e0e0e", border: sent ? "1px solid rgba(200,255,0,0.4)" : "none", borderRadius: 2, padding: "11px 28px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: resending || sent ? "default" : "pointer", opacity: resending ? 0.7 : 1, width: "100%" }}>
+              {resending ? "Sending…" : sent ? "Confirmation sent ✓" : "Resend confirmation email"}
+            </button>
+            <button onClick={onSignOut}
+              style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", fontSize: 12, cursor: "pointer", marginTop: 4 }}>
+              Use a different email — sign out
+            </button>
+          </div>
+        </div>
+        <div style={{ marginTop: 16, fontSize: 11, color: "rgba(255,255,255,0.2)" }}>
+          Check your spam folder if you don't see it within a minute.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Onboarding Wizard ────────────────────────────────────────────────────────
 function OnboardingWizard({ user, onComplete }) {
   const TOTAL = 5;
@@ -594,8 +641,7 @@ function AuthScreen({ onAuth }) {
       setLoading(false);
       if (e) setError(e.message);
       else if (data.user?.identities?.length === 0) setError("An account with this email already exists.");
-      else if (data.user?.confirmed_at) { onAuth(data.user); }
-      else setMessage("Account created! Check your email to confirm, then log in.");
+      else setMessage("Account created! Check your email to confirm — click the link and you'll be taken straight into setup.");
     }
   }
 
@@ -1145,6 +1191,7 @@ export default function App() {
   const loadingScreen = <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, letterSpacing: 4 }}>LOADING…</div>;
   if (authLoading) return loadingScreen;
   if (!user) return <AuthScreen onAuth={u => setUser(u)} />;
+  if (!user.email_confirmed_at) return <ConfirmEmailScreen email={user.email} onSignOut={signOut} />;
   if (!profileLoaded) return loadingScreen;
   if (!profile?.onboarding_complete) return (
     <OnboardingWizard user={user} onComplete={p => { setProfile(p); loadData(); }} />
