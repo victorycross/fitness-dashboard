@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, BarChart, Bar, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer } from "recharts";
 import { supabase } from "./supabase.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -51,6 +51,380 @@ function estimateCalories(exercises, bodyweightKg) {
     const kcalPerSet = (isCompound ? 7 : 4) * (bw / 70);
     return total + sets * kcalPerSet;
   }, 0));
+}
+
+// ─── Weekly sessions chart helper ────────────────────────────────────────────
+function getLast8Weeks(sessions) {
+  const result = [];
+  const now = new Date();
+  for (let i = 7; i >= 0; i--) {
+    const ref = new Date(now);
+    ref.setDate(now.getDate() - i * 7);
+    const dow = ref.getDay();
+    const mon = new Date(ref);
+    mon.setDate(ref.getDate() - (dow === 0 ? 6 : dow - 1));
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    const monStr = mon.toISOString().split("T")[0];
+    const sunStr = sun.toISOString().split("T")[0];
+    const count = sessions.filter(s => s.date >= monStr && s.date <= sunStr).length;
+    result.push({ week: shortDate(monStr), count });
+  }
+  return result;
+}
+
+// ─── Onboarding Wizard ────────────────────────────────────────────────────────
+function OnboardingWizard({ user, onComplete }) {
+  const TOTAL = 5;
+  const [step, setStep] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [data, setData] = useState({
+    name: "", locations: [], locInputType: null, locInput: "",
+    hasTrainer: false, trainer_name: "", trainer_email: "",
+    height_cm: "", initial_weight: "", initial_body_fat: "", target_bmi: "24.9",
+    weekly_sessions_target: 3, weekly_cal_target: 1500,
+    short_term_goal: "", long_term_goal: "",
+  });
+
+  const set = (k, v) => setData(d => ({ ...d, [k]: v }));
+
+  function addLocation(type, label) {
+    setData(d => ({ ...d, locations: [...d.locations, { type, label }], locInput: "", locInputType: null }));
+  }
+  function removeLocation(i) {
+    setData(d => ({ ...d, locations: d.locations.filter((_, idx) => idx !== i) }));
+  }
+
+  async function finish() {
+    setSaving(true);
+    const profileData = {
+      id: user.id,
+      name: data.name.trim(),
+      height_cm: data.height_cm || null,
+      target_bmi: data.target_bmi || "24.9",
+      workout_locations: data.locations,
+      trainer_name: data.hasTrainer && data.trainer_name ? data.trainer_name : null,
+      trainer_email: data.hasTrainer && data.trainer_email ? data.trainer_email : null,
+      weekly_sessions_target: parseInt(data.weekly_sessions_target) || 3,
+      weekly_cal_target: parseInt(data.weekly_cal_target) || 1500,
+      short_term_goal: data.short_term_goal.trim() || null,
+      long_term_goal: data.long_term_goal.trim() || null,
+      onboarding_complete: true,
+      notifications_enabled: true,
+      updated_at: new Date().toISOString(),
+    };
+    await supabase.from("profiles").upsert(profileData);
+    if (data.initial_weight) {
+      const kg = parseFloat(data.initial_weight);
+      if (!isNaN(kg)) {
+        await supabase.from("weight_log").upsert({
+          user_id: user.id, date: new Date().toISOString().split("T")[0], kg,
+          body_fat_pct: parseFloat(data.initial_body_fat) || null,
+        }, { onConflict: "date,user_id" });
+      }
+    }
+    onComplete(profileData);
+  }
+
+  const inp = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "10px 14px", fontSize: 14, fontFamily: "Georgia, serif", width: "100%", boxSizing: "border-box" };
+  const canNext = [
+    data.name.trim().length > 0,
+    data.locations.length > 0,
+    true, true, true,
+  ][step - 1];
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ width: "100%", maxWidth: 520 }}>
+        <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 6 }}>Setup</div>
+        <h1 style={{ margin: "0 0 24px", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 36, fontWeight: 900, color: "#fff" }}>
+          Let's set up your <span style={{ color: "#C8FF00" }}>profile</span>
+        </h1>
+        <div style={{ display: "flex", gap: 4, marginBottom: 32 }}>
+          {Array.from({ length: TOTAL }, (_, i) => (
+            <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i < step ? "#C8FF00" : "rgba(255,255,255,0.1)", transition: "background 0.3s" }} />
+          ))}
+        </div>
+
+        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: 36 }}>
+
+          {step === 1 && (
+            <div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: "#C8FF00", marginBottom: 4 }}>What's your name?</div>
+              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 24 }}>This is how we'll address you in the app.</div>
+              <input autoFocus style={inp} placeholder="Your full name" value={data.name}
+                onChange={e => set("name", e.target.value)}
+                onKeyDown={e => e.key === "Enter" && canNext && setStep(2)} />
+            </div>
+          )}
+
+          {step === 2 && (
+            <div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: "#C8FF00", marginBottom: 4 }}>Where do you work out?</div>
+              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 20 }}>Add all the places you train. You can change these later.</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+                <button onClick={() => { if (!data.locations.find(l => l.type === "home")) addLocation("home", "Home"); }}
+                  style={{ background: data.locations.find(l => l.type === "home") ? "rgba(200,255,0,0.15)" : "rgba(255,255,255,0.05)", border: "1px solid rgba(200,255,0,0.3)", borderRadius: 2, color: "#C8FF00", padding: "8px 16px", fontSize: 13, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1 }}>
+                  + Home
+                </button>
+                {["gym", "outdoors", "other"].map(type => (
+                  <button key={type} onClick={() => set("locInputType", data.locInputType === type ? null : type)}
+                    style={{ background: data.locInputType === type ? "rgba(200,255,0,0.1)" : "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 2, color: "rgba(255,255,255,0.7)", padding: "8px 16px", fontSize: 13, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1, textTransform: "capitalize" }}>
+                    + {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </button>
+                ))}
+              </div>
+              {data.locInputType && (
+                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                  <input autoFocus style={{ ...inp, flex: 1 }}
+                    placeholder={data.locInputType === "gym" ? "Gym name (e.g. Planet Fitness)" : data.locInputType === "outdoors" ? "Location (e.g. Riverdale Park)" : "Location name"}
+                    value={data.locInput}
+                    onChange={e => set("locInput", e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && data.locInput.trim() && addLocation(data.locInputType, data.locInput.trim())} />
+                  <button onClick={() => data.locInput.trim() && addLocation(data.locInputType, data.locInput.trim())}
+                    disabled={!data.locInput.trim()}
+                    style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "10px 18px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, cursor: "pointer", opacity: data.locInput.trim() ? 1 : 0.4 }}>
+                    Add
+                  </button>
+                </div>
+              )}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, minHeight: 32 }}>
+                {data.locations.map((loc, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(200,255,0,0.08)", border: "1px solid rgba(200,255,0,0.2)", borderRadius: 2, padding: "5px 10px" }}>
+                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: 1 }}>{loc.type}</span>
+                    <span style={{ fontSize: 13, color: "#fff" }}>{loc.label}</span>
+                    <button onClick={() => removeLocation(i)} style={{ background: "none", border: "none", color: "rgba(255,80,80,0.5)", cursor: "pointer", fontSize: 14, padding: 0, marginLeft: 2, lineHeight: 1 }}>×</button>
+                  </div>
+                ))}
+                {data.locations.length === 0 && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>Add at least one location to continue.</div>}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: "#C8FF00", marginBottom: 4 }}>Your measurements</div>
+              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 24 }}>Used to calculate BMI and track progress. All fields optional.</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div>
+                  <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Height (cm)</label>
+                  <input type="number" style={inp} placeholder="e.g. 175" value={data.height_cm} onChange={e => set("height_cm", e.target.value)} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Current weight (kg)</label>
+                  <input type="number" step="0.1" style={inp} placeholder="e.g. 85.0" value={data.initial_weight} onChange={e => set("initial_weight", e.target.value)} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Body fat %</label>
+                  <input type="number" step="0.1" style={inp} placeholder="e.g. 22.0" value={data.initial_body_fat} onChange={e => set("initial_body_fat", e.target.value)} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Target BMI</label>
+                  <input type="number" step="0.1" style={inp} placeholder="24.9" value={data.target_bmi} onChange={e => set("target_bmi", e.target.value)} />
+                  {data.height_cm && data.target_bmi && (
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>
+                      = {(parseFloat(data.target_bmi) * (parseFloat(data.height_cm) / 100) ** 2).toFixed(1)} kg target
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: "#C8FF00", marginBottom: 4 }}>Do you have a trainer?</div>
+              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 24 }}>Optional — add their details if you work with a personal trainer.</div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+                <button onClick={() => set("hasTrainer", true)}
+                  style={{ flex: 1, background: data.hasTrainer ? "#C8FF00" : "rgba(255,255,255,0.05)", border: "1px solid rgba(200,255,0,0.3)", borderRadius: 2, color: data.hasTrainer ? "#0e0e0e" : "rgba(255,255,255,0.6)", padding: 14, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 1, cursor: "pointer" }}>
+                  Yes
+                </button>
+                <button onClick={() => set("hasTrainer", false)}
+                  style={{ flex: 1, background: !data.hasTrainer ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: !data.hasTrainer ? "#fff" : "rgba(255,255,255,0.4)", padding: 14, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 1, cursor: "pointer" }}>
+                  No trainer
+                </button>
+              </div>
+              {data.hasTrainer && (
+                <div style={{ display: "grid", gap: 14 }}>
+                  <div>
+                    <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Trainer name</label>
+                    <input autoFocus style={inp} placeholder="Trainer's name" value={data.trainer_name} onChange={e => set("trainer_name", e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Trainer email (optional)</label>
+                    <input type="email" style={inp} placeholder="trainer@example.com" value={data.trainer_email} onChange={e => set("trainer_email", e.target.value)} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 5 && (
+            <div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: "#C8FF00", marginBottom: 4 }}>Targets & goals</div>
+              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 24 }}>Set your weekly targets and describe what you're working toward.</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+                <div>
+                  <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Sessions / week</label>
+                  <input type="number" min="1" max="14" style={inp} value={data.weekly_sessions_target} onChange={e => set("weekly_sessions_target", parseInt(e.target.value) || 3)} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Calories / week</label>
+                  <input type="number" min="100" step="50" style={inp} value={data.weekly_cal_target} onChange={e => set("weekly_cal_target", parseInt(e.target.value) || 1500)} />
+                </div>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Short-term goal</label>
+                <textarea style={{ ...inp, minHeight: 70, resize: "vertical" }} placeholder="e.g. Lose 5 kg before August" value={data.short_term_goal} onChange={e => set("short_term_goal", e.target.value)} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Long-term goal</label>
+                <textarea style={{ ...inp, minHeight: 70, resize: "vertical" }} placeholder="e.g. Complete a 5K run, reach a healthy BMI" value={data.long_term_goal} onChange={e => set("long_term_goal", e.target.value)} />
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 32 }}>
+            <button onClick={() => step > 1 && setStep(s => s - 1)}
+              style={{ background: "none", border: "none", color: step > 1 ? "rgba(255,255,255,0.4)" : "transparent", cursor: step > 1 ? "pointer" : "default", fontSize: 13, padding: 0 }}>
+              ← Back
+            </button>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2 }}>{step} / {TOTAL}</div>
+            {step < TOTAL ? (
+              <button onClick={() => canNext && setStep(s => s + 1)} disabled={!canNext}
+                style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "11px 28px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: canNext ? "pointer" : "default", opacity: canNext ? 1 : 0.4 }}>
+                Next →
+              </button>
+            ) : (
+              <button onClick={finish} disabled={saving}
+                style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "11px 28px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1 }}>
+                {saving ? "Saving…" : "Start Training →"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Goals Tab ────────────────────────────────────────────────────────────────
+function GoalsTab({ user, profile, weights, sessions, onProfileUpdate }) {
+  const [editing, setEditing] = useState(null); // "short" | "long"
+  const [shortGoal, setShortGoal] = useState(profile?.short_term_goal || "");
+  const [longGoal, setLongGoal]   = useState(profile?.long_term_goal  || "");
+  const [saving, setSaving] = useState(false);
+
+  const heightM  = profile?.height_cm ? parseFloat(profile.height_cm) / 100 : null;
+  const targetBMI = profile?.target_bmi ? parseFloat(profile.target_bmi) : 24.9;
+  const targetKg  = heightM ? parseFloat((targetBMI * heightM * heightM).toFixed(1)) : null;
+  const sortedW   = [...weights].sort((a, b) => a.date > b.date ? 1 : -1);
+  const latestKg  = sortedW[sortedW.length - 1]?.kg ?? null;
+  const weeklyData = getLast8Weeks(sessions);
+  const weekTarget = profile?.weekly_sessions_target || 3;
+
+  async function saveGoal(type) {
+    setSaving(true);
+    const val = type === "short" ? shortGoal.trim() : longGoal.trim();
+    const field = type === "short" ? "short_term_goal" : "long_term_goal";
+    await supabase.from("profiles").update({ [field]: val || null }).eq("id", user.id);
+    onProfileUpdate({ [field]: val || null });
+    setEditing(null);
+    setSaving(false);
+  }
+
+  const inp = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "10px 14px", fontSize: 13, fontFamily: "Georgia, serif", width: "100%", boxSizing: "border-box" };
+
+  function GoalCard({ type, label, value, editValue, onEdit, onSave, onCancel }) {
+    const isEditing = editing === type;
+    return (
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "22px 24px", flex: 1, minWidth: 240 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: type === "short" ? "#C8FF00" : "#facc15" }}>{label}</div>
+          {!isEditing && <button onClick={() => { setEditing(type); }} style={{ background: "none", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 2, color: "rgba(255,255,255,0.35)", padding: "3px 10px", fontSize: 11, cursor: "pointer" }}>Edit</button>}
+        </div>
+        {isEditing ? (
+          <>
+            <textarea style={{ ...inp, minHeight: 80, resize: "vertical", marginBottom: 10 }} autoFocus value={editValue} onChange={e => type === "short" ? setShortGoal(e.target.value) : setLongGoal(e.target.value)} placeholder={type === "short" ? "e.g. Lose 5 kg before August" : "e.g. Complete a 5K run"} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => saveGoal(type)} disabled={saving} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "7px 16px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, cursor: "pointer" }}>Save</button>
+              <button onClick={() => { setEditing(null); type === "short" ? setShortGoal(profile?.short_term_goal || "") : setLongGoal(profile?.long_term_goal || ""); }} style={{ background: "none", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 2, color: "rgba(255,255,255,0.4)", padding: "7px 12px", fontSize: 12, cursor: "pointer" }}>Cancel</button>
+            </div>
+          </>
+        ) : (
+          value
+            ? <div style={{ fontSize: 14, color: "#fff", lineHeight: 1.6 }}>{value}</div>
+            : <div style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>No goal set — click Edit to add one.</div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      {/* Goal cards */}
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 40 }}>
+        <GoalCard type="short" label="Short-term goal" value={shortGoal || profile?.short_term_goal} editValue={shortGoal} />
+        <GoalCard type="long"  label="Long-term goal"  value={longGoal  || profile?.long_term_goal}  editValue={longGoal} />
+      </div>
+
+      {/* Weight progress */}
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "24px 28px", marginBottom: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 4 }}>Weight Progress</div>
+            {targetKg && latestKg && (
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>
+                {latestKg > targetKg
+                  ? <><span style={{ color: "#facc15", fontWeight: "bold" }}>{(latestKg - targetKg).toFixed(1)} kg</span> to target of {targetKg} kg</>
+                  : latestKg < targetKg
+                    ? <><span style={{ color: "#C8FF00", fontWeight: "bold" }}>Target reached</span> — {(targetKg - latestKg).toFixed(1)} kg under goal</>
+                    : <span style={{ color: "#C8FF00", fontWeight: "bold" }}>Exactly at target!</span>
+                }
+              </div>
+            )}
+          </div>
+          {targetKg && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1 }}>— — target {targetKg} kg</div>}
+        </div>
+        {sortedW.length > 0 ? (
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={sortedW.map(w => ({ date: shortDate(w.date), kg: w.kg }))}>
+              <XAxis dataKey="date" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} />
+              <YAxis domain={["auto", "auto"]} tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} width={40} />
+              <Tooltip content={({ active, payload }) => active && payload?.length ? <div style={{ background: "#1a1a1a", border: "1px solid rgba(200,255,0,0.3)", borderRadius: 2, padding: "8px 12px" }}><div style={{ color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700 }}>{payload[0].value} kg</div></div> : null} />
+              {targetKg && <ReferenceLine y={targetKg} stroke="#facc15" strokeDasharray="5 4" strokeWidth={1.5} />}
+              <Line type="monotone" dataKey="kg" stroke="#C8FF00" strokeWidth={2} dot={{ fill: "#C8FF00", r: 4, strokeWidth: 0 }} activeDot={{ r: 6, fill: "#fff" }} />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.25)", fontSize: 13, fontStyle: "italic" }}>Log your first weight entry to see progress here.</div>
+        )}
+      </div>
+
+      {/* Weekly sessions */}
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "24px 28px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 4 }}>Weekly Training — Last 8 Weeks</div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Target: <span style={{ color: "#facc15", fontWeight: "bold" }}>{weekTarget} sessions/week</span></div>
+          </div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1 }}>— — target line</div>
+        </div>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={weeklyData} barSize={22}>
+            <XAxis dataKey="week" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} />
+            <YAxis allowDecimals={false} tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif" }} axisLine={false} tickLine={false} width={28} />
+            <Tooltip content={({ active, payload }) => active && payload?.length ? <div style={{ background: "#1a1a1a", border: "1px solid rgba(200,255,0,0.3)", borderRadius: 2, padding: "8px 12px" }}><div style={{ color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700 }}>{payload[0].value} session{payload[0].value !== 1 ? "s" : ""}</div></div> : null} />
+            <ReferenceLine y={weekTarget} stroke="#facc15" strokeDasharray="5 4" strokeWidth={1.5} />
+            <Bar dataKey="count" fill="#C8FF00" radius={[2, 2, 0, 0]} opacity={0.85}
+              label={false}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
 }
 
 // ─── Privacy Policy Modal ─────────────────────────────────────────────────────
@@ -233,7 +607,7 @@ function AuthScreen({ onAuth }) {
         <h1 style={{ margin: "0 0 8px", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 42, fontWeight: 900, lineHeight: 1, color: "#fff" }}>
           Dave's <span style={{ color: "#C8FF00" }}>Fitness</span>
         </h1>
-        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 40, fontStyle: "italic" }}>McDonald YMCA · Trainer: Susan Jadidi</div>
+        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 40, fontStyle: "italic" }}>Track your training, weight, and goals.</div>
 
         <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: 32 }}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#C8FF00", marginBottom: 24 }}>
@@ -315,7 +689,12 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
     notifications_enabled: profile?.notifications_enabled ?? true,
     weekly_sessions_target: profile?.weekly_sessions_target ?? 3,
     weekly_cal_target: profile?.weekly_cal_target ?? 1500,
+    short_term_goal: profile?.short_term_goal || "",
+    long_term_goal: profile?.long_term_goal || "",
   });
+  const [locations, setLocations] = useState(profile?.workout_locations || []);
+  const [locInputType, setLocInputType] = useState(null);
+  const [locInput, setLocInput] = useState("");
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || null);
   const [saving, setSaving] = useState(false);
@@ -327,6 +706,11 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const strength = getStrength(newPw);
+
+  function addLoc(type, label) {
+    setLocations(ls => [...ls, { type, label }]);
+    setLocInput(""); setLocInputType(null);
+  }
 
   async function deleteAccount() {
     setDeleting(true);
@@ -358,7 +742,7 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
       }
     }
 
-    const upsertData = { id: user.id, ...form, avatar_url, updated_at: new Date().toISOString() };
+    const upsertData = { id: user.id, ...form, workout_locations: locations, avatar_url, onboarding_complete: true, updated_at: new Date().toISOString() };
     const { error: e } = await supabase.from("profiles").upsert(upsertData);
     if (e) { setMessage("Error: " + e.message); setSaving(false); return; }
 
@@ -370,7 +754,7 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
       setNewPw(""); setConfirmPw(""); setChangePw(false);
     }
 
-    onSave({ ...form, avatar_url });
+    onSave({ ...form, workout_locations: locations, avatar_url, onboarding_complete: true });
     setMessage("Profile saved ✓");
     setSaving(false);
     setTimeout(() => setMessage(""), 3000);
@@ -404,7 +788,7 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
         {/* Name */}
         <div style={{ gridColumn: "1/-1" }}>
           <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Full Name</label>
-          <input style={inp} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Dave Martin" />
+          <input style={inp} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Your full name" />
         </div>
         {/* Height */}
         <div>
@@ -420,12 +804,44 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
         {/* Trainer name */}
         <div>
           <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Trainer Name</label>
-          <input style={inp} value={form.trainer_name} onChange={e => setForm(f => ({ ...f, trainer_name: e.target.value }))} placeholder="Susan Jadidi" />
+          <input style={inp} value={form.trainer_name} onChange={e => setForm(f => ({ ...f, trainer_name: e.target.value }))} placeholder="Trainer's name" />
         </div>
         {/* Trainer email */}
         <div>
           <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Trainer Email</label>
-          <input type="email" style={inp} value={form.trainer_email} onChange={e => setForm(f => ({ ...f, trainer_email: e.target.value }))} placeholder="trainer@ymca.ca" />
+          <input type="email" style={inp} value={form.trainer_email} onChange={e => setForm(f => ({ ...f, trainer_email: e.target.value }))} placeholder="trainer@example.com" />
+        </div>
+        {/* Workout locations */}
+        <div style={{ gridColumn: "1/-1", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginTop: 4 }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>Workout Locations</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+            <button onClick={() => { if (!locations.find(l => l.type === "home")) addLoc("home", "Home"); }}
+              style={{ background: locations.find(l => l.type === "home") ? "rgba(200,255,0,0.12)" : "rgba(255,255,255,0.04)", border: "1px solid rgba(200,255,0,0.25)", borderRadius: 2, color: "#C8FF00", padding: "6px 12px", fontSize: 12, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1 }}>+ Home</button>
+            {["gym", "outdoors", "other"].map(type => (
+              <button key={type} onClick={() => setLocInputType(locInputType === type ? null : type)}
+                style={{ background: locInputType === type ? "rgba(200,255,0,0.08)" : "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "rgba(255,255,255,0.6)", padding: "6px 12px", fontSize: 12, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1, textTransform: "capitalize" }}>+ {type.charAt(0).toUpperCase() + type.slice(1)}</button>
+            ))}
+          </div>
+          {locInputType && (
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <input autoFocus style={{ ...inp, flex: 1, fontSize: 12 }}
+                placeholder={locInputType === "gym" ? "Gym name" : locInputType === "outdoors" ? "Location name" : "Location name"}
+                value={locInput}
+                onChange={e => setLocInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && locInput.trim() && addLoc(locInputType, locInput.trim())} />
+              <button onClick={() => locInput.trim() && addLoc(locInputType, locInput.trim())}
+                style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "6px 14px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Add</button>
+            </div>
+          )}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {locations.map((loc, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(200,255,0,0.06)", border: "1px solid rgba(200,255,0,0.15)", borderRadius: 2, padding: "4px 8px" }}>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: 1 }}>{loc.type}</span>
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.8)" }}>{loc.label}</span>
+                <button onClick={() => setLocations(ls => ls.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", color: "rgba(255,80,80,0.4)", cursor: "pointer", fontSize: 13, padding: 0, marginLeft: 2, lineHeight: 1 }}>×</button>
+              </div>
+            ))}
+          </div>
         </div>
         {/* Weekly targets */}
         <div style={{ gridColumn: "1/-1", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginTop: 4 }}>
@@ -438,6 +854,20 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
             <div>
               <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Calories / week</label>
               <input type="number" min="100" step="50" style={inp} value={form.weekly_cal_target} onChange={e => setForm(f => ({ ...f, weekly_cal_target: parseInt(e.target.value) || 1500 }))} placeholder="1500" />
+            </div>
+          </div>
+        </div>
+        {/* Goals */}
+        <div style={{ gridColumn: "1/-1", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginTop: 4 }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>Goals</div>
+          <div style={{ display: "grid", gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Short-term goal</label>
+              <textarea style={{ ...inp, minHeight: 60, resize: "vertical" }} value={form.short_term_goal} onChange={e => setForm(f => ({ ...f, short_term_goal: e.target.value }))} placeholder="e.g. Lose 5 kg before August" />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Long-term goal</label>
+              <textarea style={{ ...inp, minHeight: 60, resize: "vertical" }} value={form.long_term_goal} onChange={e => setForm(f => ({ ...f, long_term_goal: e.target.value }))} placeholder="e.g. Complete a 5K run, reach a healthy BMI" />
             </div>
           </div>
         </div>
@@ -528,6 +958,7 @@ export default function App() {
   const [toast, setToast]             = useState("");
   const [error, setError]             = useState("");
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   // Auth listener
   useEffect(() => {
@@ -544,9 +975,10 @@ export default function App() {
   // Load profile
   useEffect(() => {
     if (!user) return;
+    setProfileLoaded(false);
     supabase.from("profiles").select("*").eq("id", user.id).single().then(({ data }) => {
       setProfile(data);
-      if (data?.trainer_name) setNewSession(s => ({ ...s, location: "YMCA with " + data.trainer_name }));
+      setProfileLoaded(true);
     });
   }, [user]);
 
@@ -710,12 +1142,18 @@ export default function App() {
   const inp = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "8px 12px", fontSize: 13, fontFamily: "Georgia, serif", width: "100%" };
 
   // ── Render ──
-  if (authLoading) return <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, letterSpacing: 4 }}>LOADING…</div>;
+  const loadingScreen = <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, letterSpacing: 4 }}>LOADING…</div>;
+  if (authLoading) return loadingScreen;
   if (!user) return <AuthScreen onAuth={u => setUser(u)} />;
-  if (loading) return <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, letterSpacing: 4 }}>LOADING…</div>;
+  if (!profileLoaded) return loadingScreen;
+  if (!profile?.onboarding_complete) return (
+    <OnboardingWizard user={user} onComplete={p => { setProfile(p); loadData(); }} />
+  );
+  if (loading) return loadingScreen;
 
   const displayName = profile?.name || user.email.split("@")[0];
-  const trainerName = profile?.trainer_name || "Susan";
+  const trainerName = profile?.trainer_name || null;
+  const primaryLocation = profile?.workout_locations?.[0]?.label || null;
 
   return (
     <div style={{ minHeight: "100vh", background: "#0e0e0e", color: "#fff", fontFamily: "Georgia, serif", paddingBottom: 80 }}>
@@ -733,7 +1171,11 @@ export default function App() {
           <h1 style={{ margin: 0, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 48, fontWeight: 900, lineHeight: 1, letterSpacing: -1 }}>
             {displayName}'s <span style={{ color: "#C8FF00" }}>Fitness</span>
           </h1>
-          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginTop: 8, fontStyle: "italic" }}>McDonald YMCA · Trainer: {trainerName}</div>
+          {(primaryLocation || trainerName) && (
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginTop: 8, fontStyle: "italic" }}>
+              {[primaryLocation, trainerName ? `Trainer: ${trainerName}` : null].filter(Boolean).join(" · ")}
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
           {/* Avatar */}
@@ -753,7 +1195,7 @@ export default function App() {
 
       {/* Tabs */}
       <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "0 40px" }}>
-        {[["workouts", "Workouts"], ["weight", "Weight & BMI"], ["profile", "Profile"]].map(([key, label]) => (
+        {[["workouts", "Workouts"], ["weight", "Weight & BMI"], ["goals", "Goals"], ["profile", "Profile"]].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{ background: "none", border: "none", borderBottom: tab === key ? "2px solid #C8FF00" : "2px solid transparent", color: tab === key ? "#C8FF00" : "rgba(255,255,255,0.35)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", padding: "14px 20px 12px", cursor: "pointer", marginBottom: -1 }}>{label}</button>
         ))}
       </div>
@@ -816,7 +1258,10 @@ export default function App() {
                 </div>
                 <div style={{ flex: 2, minWidth: 200 }}>
                   <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Location</label>
-                  <input type="text" style={inp} value={newSession.location} onChange={e => setNewSession(s => ({ ...s, location: e.target.value }))} placeholder="YMCA with Susan" />
+                  <input type="text" style={inp} value={newSession.location} onChange={e => setNewSession(s => ({ ...s, location: e.target.value }))} placeholder="Where did you train?" list="loc-suggestions" />
+                  <datalist id="loc-suggestions">
+                    {(profile?.workout_locations || []).map((loc, i) => <option key={i} value={loc.label} />)}
+                  </datalist>
                 </div>
               </div>
 
@@ -974,6 +1419,12 @@ export default function App() {
             </div>
           </div>
         </>}
+
+        {/* GOALS TAB */}
+        {tab === "goals" && (
+          <GoalsTab user={user} profile={profile} weights={weights} sessions={sessions}
+            onProfileUpdate={updates => setProfile(p => ({ ...p, ...updates }))} />
+        )}
 
         {/* PROFILE TAB */}
         {tab === "profile" && (
