@@ -39,6 +39,20 @@ function shortDate(d) {
 }
 function bmiLeft(b) { return `${Math.min(98, Math.max(2, ((b - 16) / (45 - 16)) * 100))}%`; }
 
+// ─── Calorie estimation ───────────────────────────────────────────────────────
+const COMPOUND_KEYWORDS = /bench|squat|deadlift|press|row|pull.?up|chin.?up|dip|lunge|clean|snatch|thrust|hip hinge/i;
+function estimateCalories(exercises, bodyweightKg) {
+  const bw = bodyweightKg || 80;
+  return Math.round(exercises.reduce((total, ex) => {
+    const sets  = Math.max(1, parseInt(ex.sets) || 1);
+    const isCompound = COMPOUND_KEYWORDS.test(ex.name || "");
+    // kcal/set = MET-based estimate scaled to bodyweight
+    // Compound: ~7 kcal/set @ 70kg; Isolation: ~4 kcal/set @ 70kg
+    const kcalPerSet = (isCompound ? 7 : 4) * (bw / 70);
+    return total + sets * kcalPerSet;
+  }, 0));
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, accent }) {
   return (
@@ -195,6 +209,8 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
     trainer_name: profile?.trainer_name || "",
     trainer_email: profile?.trainer_email || "",
     notifications_enabled: profile?.notifications_enabled ?? true,
+    weekly_sessions_target: profile?.weekly_sessions_target ?? 3,
+    weekly_cal_target: profile?.weekly_cal_target ?? 1500,
   });
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url || null);
@@ -297,6 +313,20 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
         <div>
           <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Trainer Email</label>
           <input type="email" style={inp} value={form.trainer_email} onChange={e => setForm(f => ({ ...f, trainer_email: e.target.value }))} placeholder="trainer@ymca.ca" />
+        </div>
+        {/* Weekly targets */}
+        <div style={{ gridColumn: "1/-1", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginTop: 4 }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>Weekly Targets</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Sessions / week</label>
+              <input type="number" min="1" max="14" style={inp} value={form.weekly_sessions_target} onChange={e => setForm(f => ({ ...f, weekly_sessions_target: parseInt(e.target.value) || 3 }))} placeholder="3" />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Calories / week</label>
+              <input type="number" min="100" step="50" style={inp} value={form.weekly_cal_target} onChange={e => setForm(f => ({ ...f, weekly_cal_target: parseInt(e.target.value) || 1500 }))} placeholder="1500" />
+            </div>
+          </div>
         </div>
         {/* Notifications */}
         <div style={{ gridColumn: "1/-1", display: "flex", alignItems: "center", gap: 12 }}>
@@ -413,6 +443,21 @@ export default function App() {
 
   function showToast(m) { setToast(m); setTimeout(() => setToast(""), 2500); }
 
+  // Calorie recalculation
+  async function recalcAllCalories() {
+    const sortedWeights = [...weights].sort((a, b) => a.date > b.date ? 1 : -1);
+    const bw = sortedWeights[sortedWeights.length - 1]?.kg || 80;
+    const updates = sessions.map(s => ({
+      id: s.id,
+      calories_est: estimateCalories(s.exercises || [], bw),
+    }));
+    for (const u of updates) {
+      await supabase.from("workout_sessions").update({ calories_est: u.calories_est }).eq("id", u.id).eq("user_id", user.id);
+    }
+    showToast("CALORIES UPDATED ✓");
+    loadData();
+  }
+
   // Workout helpers
   const totalSets = sessions.reduce((a, s) => a + (s.exercises || []).reduce((b, e) => b + Number(e.sets || 0), 0), 0);
   const lastSession = sessions[0];
@@ -423,7 +468,9 @@ export default function App() {
 
   async function saveSession() {
     if (!newSession.date || newSession.exercises.some(e => !e.name)) return;
-    const record = { user_id: user.id, date: newSession.date, label: `Session #${sessions.length + 1}`, location: newSession.location || "YMCA", exercises: newSession.exercises };
+    const bw = [...weights].sort((a, b) => a.date > b.date ? 1 : -1).pop()?.kg || 80;
+    const calories_est = estimateCalories(newSession.exercises, bw);
+    const record = { user_id: user.id, date: newSession.date, label: `Session #${sessions.length + 1}`, location: newSession.location || "YMCA", exercises: newSession.exercises, calories_est };
     const { error: e } = await supabase.from("workout_sessions").insert(record);
     if (e) { setError("Save failed: " + e.message); return; }
     setAdding(false);
@@ -498,6 +545,17 @@ export default function App() {
   const bmiCat        = currentBMI ? bmiCategory(currentBMI) : null;
   const targetKg      = (targetBMI * heightM * heightM).toFixed(1);
   const toTarget      = latestW ? (latestW.kg - parseFloat(targetKg)).toFixed(1) : null;
+
+  // Weekly stats
+  const weekStart = (() => {
+    const d = new Date(); const dow = d.getDay();
+    d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+    return d.toISOString().split("T")[0];
+  })();
+  const thisWeekSessions = sessions.filter(s => s.date >= weekStart);
+  const thisWeekCals     = thisWeekSessions.reduce((a, s) => a + (s.calories_est || 0), 0);
+  const weekSessionsTarget = profile?.weekly_sessions_target || 3;
+  const weekCalTarget      = profile?.weekly_cal_target || 1500;
 
   async function logWeight() {
     const kg = parseFloat(newWeight);
@@ -575,8 +633,11 @@ export default function App() {
           <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap" }}>
             <StatCard label="Sessions" value={sessions.length} sub="YMCA + home" />
             <StatCard label="Total Sets" value={totalSets} sub="across all sessions" />
-            <StatCard label="Exercises" value={sessions.reduce((a, s) => a + (s.exercises || []).length, 0)} sub="movements logged" />
-            <StatCard label="Last Session" value={lastSession ? shortDate(lastSession.date) : "—"} sub={lastSession ? formatDate(lastSession.date) : ""} />
+            <StatCard label="This Week" value={`${thisWeekSessions.length}/${weekSessionsTarget}`} sub="sessions this week" accent={thisWeekSessions.length >= weekSessionsTarget ? "#C8FF00" : "#facc15"} />
+            <StatCard label="Week Cals" value={thisWeekCals} sub={`target: ${weekCalTarget} kcal`} accent={thisWeekCals >= weekCalTarget ? "#C8FF00" : "#facc15"} />
+          </div>
+          <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+            <button onClick={recalcAllCalories} style={{ background: "none", border: "1px solid rgba(200,255,0,0.2)", borderRadius: 2, color: "rgba(200,255,0,0.6)", padding: "6px 16px", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>Recalculate Calories</button>
           </div>
 
           {adding && (
@@ -659,6 +720,7 @@ export default function App() {
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
                       <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontFamily: "'Barlow Condensed', sans-serif" }}>{(session.exercises || []).length} exercises</div>
+                      {session.calories_est > 0 && <div style={{ fontSize: 12, color: "rgba(200,255,0,0.5)", fontFamily: "'Barlow Condensed', sans-serif" }}>~{session.calories_est} kcal</div>}
                       <div style={{ color: "rgba(255,255,255,0.25)", fontSize: 18 }}>{activeSession === session.id ? "−" : "+"}</div>
                     </div>
                   </div>
