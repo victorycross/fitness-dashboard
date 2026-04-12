@@ -42,23 +42,27 @@ Deno.serve(async (req) => {
 
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: `You are a fitness log parser. Extract workout exercises from the user's text or image.
-Return ONLY valid JSON with this exact structure — no markdown, no explanation:
+Return ONLY valid JSON — no markdown, no explanation:
 {
   "exercises": [
-    { "name": "Exercise Name", "sets": "3", "reps": "10", "weight": "100kg" }
+    { "name": "Exercise Name", "reps": "10", "weight": "100kg" }
   ],
   "date": "YYYY-MM-DD or null",
   "location": "location string or null"
 }
-Rules:
-- sets and reps are numeric strings ("3", "10")
+CRITICAL RULES — read carefully:
+- Create ONE entry per individual set, not one entry per exercise.
+  Example: "bench press 3x10 at 100kg" → 3 entries, each with reps "10" and weight "100kg"
+  Example: "squats 4 sets: 10/8/8/6 at 80kg" → 4 entries with reps "10","8","8","6"
+- reps is a numeric string ("10")
 - weight is a free string ("100kg", "45lbs", "bodyweight", "")
-- Extract ALL exercises mentioned
-- If reps vary per set (e.g. 10/8/6), use the first value
+- If weight varies per set, use the actual weight for that set
 - If no weight mentioned, use ""
-- date and location are null if not mentioned`,
+- date: if a date is mentioned (today, yesterday, a weekday, or explicit date), convert to YYYY-MM-DD using today's date as reference. Otherwise null.
+- location: extract if mentioned, otherwise null
+- Extract ALL exercises and ALL sets`,
       messages: [{ role: "user", content }],
     });
 

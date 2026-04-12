@@ -449,7 +449,7 @@ export default function App() {
       if (data.error) throw new Error(data.error);
       const exercises = (data.exercises || []).map(e => ({
         name: e.name || "",
-        sets: String(e.sets || ""),
+        sets: "1",
         reps: String(e.reps || ""),
         weight: e.weight || "",
       }));
