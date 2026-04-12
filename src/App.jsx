@@ -1428,6 +1428,157 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
   );
 }
 
+// ─── Admin Tab ───────────────────────────────────────────────────────────────
+const ADMIN_EMAIL = "david@brightpathtechnology.io";
+
+function AdminTab({ user }) {
+  const [codes, setCodes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newCode, setNewCode] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
+
+  async function loadCodes() {
+    setLoading(true);
+    const { data, error: e } = await supabase
+      .from("invite_codes")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (e) setError(e.message);
+    else setCodes(data || []);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadCodes(); }, []);
+
+  async function addCode() {
+    const code = newCode.trim().toUpperCase();
+    if (!code) return;
+    setSaving(true); setError(""); setMsg("");
+    const { error: e } = await supabase.from("invite_codes").insert({ code, label: newLabel.trim() || null });
+    setSaving(false);
+    if (e) setError(e.message);
+    else { setMsg(`✓ Code ${code} added.`); setNewCode(""); setNewLabel(""); loadCodes(); setTimeout(() => setMsg(""), 4000); }
+  }
+
+  async function toggleActive(code, current) {
+    const { error: e } = await supabase.from("invite_codes").update({ active: !current }).eq("code", code);
+    if (e) setError(e.message);
+    else setCodes(cs => cs.map(c => c.code === code ? { ...c, active: !current } : c));
+  }
+
+  async function deleteCode(code) {
+    const { error: e } = await supabase.from("invite_codes").delete().eq("code", code);
+    if (e) setError(e.message);
+    else setCodes(cs => cs.filter(c => c.code !== code));
+  }
+
+  const inp = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "8px 12px", fontSize: 13, fontFamily: "Georgia, serif", width: "100%", boxSizing: "border-box" };
+  const activeCount = codes.filter(c => c.active).length;
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 28, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 900, color: "#fff", marginBottom: 4 }}>Admin</div>
+          <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 13 }}>Invite code management · {user.email}</div>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ background: "rgba(200,255,0,0.08)", border: "1px solid rgba(200,255,0,0.2)", borderRadius: 2, padding: "8px 16px", textAlign: "center" }}>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 24, fontWeight: 700, color: "#C8FF00", lineHeight: 1 }}>{activeCount}</div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 2, textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", marginTop: 3 }}>Active</div>
+          </div>
+          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "8px 16px", textAlign: "center" }}>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 24, fontWeight: 700, color: "#fff", lineHeight: 1 }}>{codes.length}</div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 2, textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", marginTop: 3 }}>Total</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Add code form */}
+      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: 24, marginBottom: 24 }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.45)", marginBottom: 16 }}>Add Invite Code</div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: "0 0 160px" }}>
+            <label htmlFor="admin-new-code" style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 6 }}>Code</label>
+            <input
+              id="admin-new-code"
+              type="text"
+              style={{ ...inp, textTransform: "uppercase", letterSpacing: 3, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15 }}
+              value={newCode}
+              onChange={e => setNewCode(e.target.value.toUpperCase())}
+              onKeyDown={e => e.key === "Enter" && addCode()}
+              placeholder="MYCODE"
+              autoComplete="off"
+            />
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <label htmlFor="admin-new-label" style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 6 }}>Label <span style={{ color: "rgba(255,255,255,0.3)" }}>(optional)</span></label>
+            <input
+              id="admin-new-label"
+              type="text"
+              style={inp}
+              value={newLabel}
+              onChange={e => setNewLabel(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && addCode()}
+              placeholder="e.g. Friend of David, Gym cohort 2026"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={addCode}
+            disabled={saving || !newCode.trim()}
+            style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "9px 22px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: (saving || !newCode.trim()) ? "default" : "pointer", opacity: (saving || !newCode.trim()) ? 0.4 : 1, flexShrink: 0, height: 38 }}>
+            {saving ? "Adding…" : "Add Code"}
+          </button>
+        </div>
+        {error && <div role="alert" style={{ marginTop: 12, fontSize: 12, color: "#f87171" }}>{error}</div>}
+        {msg   && <div role="status" style={{ marginTop: 12, fontSize: 12, color: "#C8FF00" }}>{msg}</div>}
+      </div>
+
+      {/* Code list */}
+      {loading ? (
+        <div style={{ color: "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, letterSpacing: 3 }}>LOADING…</div>
+      ) : codes.length === 0 ? (
+        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, fontStyle: "italic" }}>No invite codes yet. Add one above.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {codes.map(c => (
+            <div key={c.code} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", background: c.active ? "rgba(200,255,0,0.025)" : "rgba(255,255,255,0.02)", border: `1px solid ${c.active ? "rgba(200,255,0,0.15)" : "rgba(255,255,255,0.06)"}`, borderRadius: 2, flexWrap: "wrap" }}>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 3, color: c.active ? "#C8FF00" : "rgba(255,255,255,0.25)", minWidth: 120 }}>{c.code}</div>
+              <div style={{ flex: 1, fontSize: 13, color: "rgba(255,255,255,0.6)", minWidth: 100 }}>
+                {c.label || <em style={{ color: "rgba(255,255,255,0.25)" }}>no label</em>}
+              </div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontFamily: "'Barlow Condensed', sans-serif", whiteSpace: "nowrap" }}>
+                {new Date(c.created_at).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}
+              </div>
+              {/* Active toggle */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div
+                  role="switch"
+                  aria-checked={c.active}
+                  aria-label={`${c.active ? "Deactivate" : "Activate"} code ${c.code}`}
+                  tabIndex={0}
+                  onClick={() => toggleActive(c.code, c.active)}
+                  onKeyDown={e => (e.key === "Enter" || e.key === " ") && toggleActive(c.code, c.active)}
+                  style={{ width: 36, height: 20, borderRadius: 10, background: c.active ? "#C8FF00" : "rgba(255,255,255,0.1)", cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}
+                >
+                  <div style={{ position: "absolute", top: 3, left: c.active ? 19 : 3, width: 14, height: 14, borderRadius: "50%", background: c.active ? "#0e0e0e" : "rgba(255,255,255,0.4)", transition: "left 0.2s" }} />
+                </div>
+                <span style={{ fontSize: 11, color: c.active ? "#C8FF00" : "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1, textTransform: "uppercase", minWidth: 52 }}>{c.active ? "Active" : "Off"}</span>
+              </div>
+              <button type="button" onClick={() => deleteCode(c.code)} aria-label={`Delete code ${c.code}`} style={{ background: "none", border: "none", color: "rgba(255,80,80,0.35)", cursor: "pointer", fontSize: 20, padding: "0 4px", lineHeight: 1, flexShrink: 0 }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState(null);
@@ -1690,7 +1841,13 @@ export default function App() {
 
       {/* Tabs */}
       <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "0 40px" }}>
-        {[["workouts", "Workouts"], ["weight", "Weight & BMI"], ["goals", "Goals"], ["profile", "Profile"]].map(([key, label]) => (
+        {[
+          ["workouts", "Workouts"],
+          ["weight",   "Weight & BMI"],
+          ["goals",    "Goals"],
+          ["profile",  "Profile"],
+          ...(user.email === ADMIN_EMAIL ? [["admin", "Admin"]] : []),
+        ].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{ background: "none", border: "none", borderBottom: tab === key ? "2px solid #C8FF00" : "2px solid transparent", color: tab === key ? "#C8FF00" : "rgba(255,255,255,0.35)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", padding: "14px 20px 12px", cursor: "pointer", marginBottom: -1 }}>{label}</button>
         ))}
       </div>
@@ -1925,6 +2082,11 @@ export default function App() {
         {/* PROFILE TAB */}
         {tab === "profile" && (
           <ProfileTab user={user} profile={profile} onSave={p => setProfile(p)} onSignOut={signOut} />
+        )}
+
+        {/* ADMIN TAB */}
+        {tab === "admin" && user.email === ADMIN_EMAIL && (
+          <AdminTab user={user} />
         )}
 
       </div>
