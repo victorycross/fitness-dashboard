@@ -357,11 +357,54 @@ function OnboardingWizard({ user, onComplete }) {
 }
 
 // ─── Goals Tab ────────────────────────────────────────────────────────────────
-function GoalsTab({ user, profile, weights, sessions, onProfileUpdate }) {
+function GoalsTab({ user, profile, weights, sessions, photos, onProfileUpdate, onPhotosChange }) {
   const [editing, setEditing] = useState(null); // "short" | "long"
   const [shortGoal, setShortGoal] = useState(profile?.short_term_goal || "");
   const [longGoal, setLongGoal]   = useState(profile?.long_term_goal  || "");
   const [saving, setSaving] = useState(false);
+
+  // Photo state
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadPreview, setUploadPreview] = useState(null);
+  const [uploadDate, setUploadDate] = useState(new Date().toISOString().split("T")[0]);
+  const [uploadCaption, setUploadCaption] = useState("");
+  const [uploadIsBefore, setUploadIsBefore] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [lightbox, setLightbox] = useState(null);
+
+  function handlePhotoFile(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    setUploadFile(f);
+    setUploadPreview(URL.createObjectURL(f));
+  }
+
+  async function uploadPhoto() {
+    if (!uploadFile) return;
+    setUploading(true);
+    const ext = uploadFile.name.split(".").pop();
+    const path = `${user.id}/${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("progress-photos").upload(path, uploadFile);
+    if (upErr) { setUploading(false); return; }
+    const { data: urlData } = supabase.storage.from("progress-photos").getPublicUrl(path);
+    await supabase.from("progress_photos").insert({
+      user_id: user.id, photo_url: urlData.publicUrl,
+      date: uploadDate, caption: uploadCaption.trim() || null, is_before: uploadIsBefore,
+    });
+    setShowUpload(false); setUploadFile(null); setUploadPreview(null);
+    setUploadCaption(""); setUploadIsBefore(false);
+    setUploading(false);
+    onPhotosChange();
+  }
+
+  async function deletePhoto(photo) {
+    const path = photo.photo_url.split("/progress-photos/")[1];
+    if (path) await supabase.storage.from("progress-photos").remove([decodeURIComponent(path)]);
+    await supabase.from("progress_photos").delete().eq("id", photo.id).eq("user_id", user.id);
+    setLightbox(null);
+    onPhotosChange();
+  }
 
   const heightM  = profile?.height_cm ? parseFloat(profile.height_cm) / 100 : null;
   const targetBMI = profile?.target_bmi ? parseFloat(profile.target_bmi) : 24.9;
@@ -470,6 +513,111 @@ function GoalsTab({ user, profile, weights, sessions, onProfileUpdate }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Visual Progress — Photos */}
+      <div style={{ marginTop: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>Visual Progress</div>
+          <button onClick={() => { setShowUpload(true); setUploadDate(new Date().toISOString().split("T")[0]); }}
+            style={{ background: "rgba(200,255,0,0.08)", border: "1px solid rgba(200,255,0,0.25)", borderRadius: 2, color: "#C8FF00", padding: "6px 14px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
+            + Add Photo
+          </button>
+        </div>
+
+        {/* Upload form */}
+        {showUpload && (
+          <div style={{ background: "rgba(200,255,0,0.03)", border: "1px solid rgba(200,255,0,0.15)", borderRadius: 2, padding: 24, marginBottom: 20 }}>
+            <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+              <div style={{ flex: "0 0 auto" }}>
+                <label style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 120, height: 120, border: "2px dashed rgba(255,255,255,0.15)", borderRadius: 2, cursor: "pointer", overflow: "hidden", background: "rgba(255,255,255,0.03)" }}>
+                  {uploadPreview
+                    ? <img src={uploadPreview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    : <div style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 12 }}><div style={{ fontSize: 28, marginBottom: 6 }}>📷</div>Choose photo</div>
+                  }
+                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhotoFile} />
+                </label>
+              </div>
+              <div style={{ flex: 1, minWidth: 200, display: "grid", gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Date</label>
+                  <input type="date" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "8px 12px", fontSize: 13, fontFamily: "Georgia, serif", width: "100%" }}
+                    value={uploadDate} onChange={e => setUploadDate(e.target.value)} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Caption (optional)</label>
+                  <input style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "8px 12px", fontSize: 13, fontFamily: "Georgia, serif", width: "100%" }}
+                    placeholder="e.g. Week 4 check-in" value={uploadCaption} onChange={e => setUploadCaption(e.target.value)} />
+                </div>
+                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 13, color: "rgba(255,255,255,0.6)" }}>
+                  <div onClick={() => setUploadIsBefore(v => !v)} style={{ width: 36, height: 20, borderRadius: 10, background: uploadIsBefore ? "#C8FF00" : "rgba(255,255,255,0.1)", cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
+                    <div style={{ position: "absolute", top: 2, left: uploadIsBefore ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: uploadIsBefore ? "#0e0e0e" : "rgba(255,255,255,0.4)", transition: "left 0.2s" }} />
+                  </div>
+                  Mark as "Before" photo
+                </label>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <button onClick={uploadPhoto} disabled={!uploadFile || uploading}
+                style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "10px 24px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: !uploadFile || uploading ? "default" : "pointer", opacity: !uploadFile || uploading ? 0.5 : 1 }}>
+                {uploading ? "Uploading…" : "Save Photo"}
+              </button>
+              <button onClick={() => { setShowUpload(false); setUploadFile(null); setUploadPreview(null); setUploadCaption(""); setUploadIsBefore(false); }}
+                style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "rgba(255,255,255,0.4)", padding: "10px 18px", fontSize: 12, cursor: "pointer" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Photo grid */}
+        {photos.length === 0 && !showUpload ? (
+          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 2, padding: "40px 24px", textAlign: "center" }}>
+            <div style={{ fontSize: 32, marginBottom: 10 }}>📷</div>
+            <div style={{ color: "rgba(255,255,255,0.25)", fontSize: 13, fontStyle: "italic" }}>No photos yet — add your first to start tracking your visual progress.</div>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
+            {photos.map(photo => (
+              <div key={photo.id} onClick={() => setLightbox(photo)}
+                style={{ position: "relative", cursor: "pointer", borderRadius: 2, overflow: "hidden", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <img src={photo.photo_url} alt={photo.caption || photo.date}
+                  style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }} />
+                {photo.is_before && (
+                  <div style={{ position: "absolute", top: 6, left: 6, background: "#C8FF00", color: "#0e0e0e", fontSize: 9, padding: "2px 7px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: 1, borderRadius: 1 }}>BEFORE</div>
+                )}
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent,rgba(0,0,0,0.75))", padding: "20px 8px 8px" }}>
+                  <div style={{ color: "#fff", fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1 }}>{shortDate(photo.date)}</div>
+                  {photo.caption && <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>{photo.caption}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.93)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={() => setLightbox(null)}>
+          <div style={{ position: "relative", maxWidth: 680, width: "100%" }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setLightbox(null)}
+              style={{ position: "absolute", top: -14, right: -14, width: 32, height: 32, borderRadius: "50%", background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}>×</button>
+            <img src={lightbox.photo_url} alt={lightbox.caption || lightbox.date}
+              style={{ width: "100%", maxHeight: "75vh", objectFit: "contain", borderRadius: 2, display: "block" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 14, flexWrap: "wrap", gap: 10 }}>
+              <div>
+                {lightbox.is_before && <div style={{ background: "#C8FF00", color: "#0e0e0e", fontSize: 9, padding: "2px 7px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: 1, display: "inline-block", marginBottom: 6, borderRadius: 1 }}>BEFORE</div>}
+                <div style={{ color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, letterSpacing: 1 }}>{formatDate(lightbox.date)}</div>
+                {lightbox.caption && <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, marginTop: 4 }}>{lightbox.caption}</div>}
+              </div>
+              <button onClick={() => deletePhoto(lightbox)}
+                style={{ background: "none", border: "1px solid rgba(255,60,60,0.3)", borderRadius: 2, color: "rgba(255,80,80,0.6)", padding: "7px 16px", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", textTransform: "uppercase", letterSpacing: 1 }}>
+                Delete photo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -918,11 +1066,19 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
           </div>
         </div>
         {/* Notifications */}
-        <div style={{ gridColumn: "1/-1", display: "flex", alignItems: "center", gap: 12 }}>
-          <div onClick={() => setForm(f => ({ ...f, notifications_enabled: !f.notifications_enabled }))} style={{ width: 44, height: 24, borderRadius: 12, background: form.notifications_enabled ? "#C8FF00" : "rgba(255,255,255,0.1)", cursor: "pointer", position: "relative", transition: "background 0.2s" }}>
-            <div style={{ position: "absolute", top: 3, left: form.notifications_enabled ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: form.notifications_enabled ? "#0e0e0e" : "rgba(255,255,255,0.4)", transition: "left 0.2s" }} />
+        <div style={{ gridColumn: "1/-1", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginTop: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+            <div onClick={() => setForm(f => ({ ...f, notifications_enabled: !f.notifications_enabled }))} style={{ width: 44, height: 24, borderRadius: 12, background: form.notifications_enabled ? "#C8FF00" : "rgba(255,255,255,0.1)", cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
+              <div style={{ position: "absolute", top: 3, left: form.notifications_enabled ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: form.notifications_enabled ? "#0e0e0e" : "rgba(255,255,255,0.4)", transition: "left 0.2s" }} />
+            </div>
+            <span style={{ fontSize: 13, color: form.notifications_enabled ? "#fff" : "rgba(255,255,255,0.4)" }}>Workout &amp; weight reminders</span>
           </div>
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>Workout & weight reminders</span>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", lineHeight: 1.7, paddingLeft: 56 }}>
+            {form.notifications_enabled
+              ? <>Sends a daily email when you haven't logged a workout in 3 days or weight in 7 days. Every email includes a one-click unsubscribe link — or toggle this off and save to stop immediately.</>
+              : <>Reminders are off. Toggle on to receive daily nudge emails when your workout or weight log falls behind.</>
+            }
+          </div>
         </div>
       </div>
 
@@ -989,6 +1145,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [sessions, setSessions]       = useState([]);
   const [weights, setWeights]         = useState([]);
+  const [photos, setPhotos]           = useState([]);
   const [loading, setLoading]         = useState(true);
   const [tab, setTab]                 = useState("workouts");
   const [activeSession, setActiveSession] = useState(null);
@@ -1037,13 +1194,14 @@ export default function App() {
       setError("Loading timed out — check your connection and refresh.");
     }, 10000);
     try {
-      const [{ data: sd, error: se }, { data: wd, error: we }] = await Promise.all([
+      const [{ data: sd, error: se }, { data: wd, error: we }, { data: pd }] = await Promise.all([
         supabase.from("workout_sessions").select("*").eq("user_id", user.id).order("date", { ascending: false }),
         supabase.from("weight_log").select("*").eq("user_id", user.id).order("date", { ascending: true }),
+        supabase.from("progress_photos").select("*").eq("user_id", user.id).order("date", { ascending: true }),
       ]);
       clearTimeout(timeout);
       if (se) throw se; if (we) throw we;
-      setSessions(sd || []); setWeights(wd || []);
+      setSessions(sd || []); setWeights(wd || []); setPhotos(pd || []);
     } catch (e) { clearTimeout(timeout); setError("Failed to load: " + e.message); }
     finally { setLoading(false); }
   }, [user]);
@@ -1182,7 +1340,7 @@ export default function App() {
 
   async function signOut() {
     await supabase.auth.signOut();
-    setUser(null); setProfile(null); setSessions([]); setWeights([]);
+    setUser(null); setProfile(null); setSessions([]); setWeights([]); setPhotos([]);
   }
 
   const inp = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "8px 12px", fontSize: 13, fontFamily: "Georgia, serif", width: "100%" };
@@ -1470,7 +1628,8 @@ export default function App() {
         {/* GOALS TAB */}
         {tab === "goals" && (
           <GoalsTab user={user} profile={profile} weights={weights} sessions={sessions}
-            onProfileUpdate={updates => setProfile(p => ({ ...p, ...updates }))} />
+            photos={photos} onProfileUpdate={updates => setProfile(p => ({ ...p, ...updates }))}
+            onPhotosChange={loadData} />
         )}
 
         {/* PROFILE TAB */}
