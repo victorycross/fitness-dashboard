@@ -357,6 +357,10 @@ export default function App() {
   const [tab, setTab]                 = useState("workouts");
   const [activeSession, setActiveSession] = useState(null);
   const [adding, setAdding]           = useState(false);
+  const [aiMode, setAiMode]           = useState(false);
+  const [aiText, setAiText]           = useState("");
+  const [aiImage, setAiImage]         = useState(null);
+  const [aiParsing, setAiParsing]     = useState(false);
   const [newSession, setNewSession]   = useState({ date: "", location: "", exercises: [{ ...EMPTY_EXERCISE }] });
   const [newWeight, setNewWeight]     = useState("");
   const [newBodyFat, setNewBodyFat]   = useState("");
@@ -425,6 +429,44 @@ export default function App() {
     setAdding(false);
     setNewSession({ date: "", location: profile?.trainer_name ? "YMCA with " + profile.trainer_name : "YMCA", exercises: [{ ...EMPTY_EXERCISE }] });
     showToast("SESSION SAVED ✓"); loadData();
+  }
+
+  async function parseWithAI() {
+    if (!aiText && !aiImage) return;
+    setAiParsing(true);
+    try {
+      let image_base64 = null;
+      let image_media_type = null;
+      if (aiImage) {
+        const buf = await aiImage.arrayBuffer();
+        image_base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        image_media_type = aiImage.type || "image/jpeg";
+      }
+      const { data, error: fnErr } = await supabase.functions.invoke("parse-workout", {
+        body: { description: aiText, image_base64, image_media_type },
+      });
+      if (fnErr) throw new Error(fnErr.message);
+      if (data.error) throw new Error(data.error);
+      const exercises = (data.exercises || []).map(e => ({
+        name: e.name || "",
+        sets: String(e.sets || ""),
+        reps: String(e.reps || ""),
+        weight: e.weight || "",
+      }));
+      setNewSession(s => ({
+        ...s,
+        exercises: exercises.length ? exercises : s.exercises,
+        date: data.date || s.date,
+        location: data.location || s.location,
+      }));
+      setAiMode(false);
+      setAiText("");
+      setAiImage(null);
+    } catch (e) {
+      setError("AI parse failed: " + e.message);
+    } finally {
+      setAiParsing(false);
+    }
   }
 
   async function deleteSession(id) {
@@ -527,7 +569,41 @@ export default function App() {
 
           {adding && (
             <div style={{ marginTop: 32, background: "rgba(200,255,0,0.04)", border: "1px solid rgba(200,255,0,0.2)", borderRadius: 2, padding: 28 }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 20, color: "#C8FF00" }}>New Session</div>
+              {/* Header */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#C8FF00" }}>New Session</div>
+                <button
+                  onClick={() => { setAiMode(v => !v); setAiText(""); setAiImage(null); }}
+                  style={{ background: aiMode ? "#C8FF00" : "rgba(200,255,0,0.08)", border: "1px solid rgba(200,255,0,0.3)", borderRadius: 2, color: aiMode ? "#0e0e0e" : "#C8FF00", padding: "6px 14px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}
+                >✦ AI Parse</button>
+              </div>
+
+              {/* AI Parse panel */}
+              {aiMode && (
+                <div style={{ background: "rgba(200,255,0,0.03)", border: "1px solid rgba(200,255,0,0.15)", borderRadius: 2, padding: 20, marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", marginBottom: 10 }}>Describe your workout</div>
+                  <textarea
+                    placeholder={"e.g. 3 sets bench press 100kg x10, squats 80kg 4x8, cable rows 60kg x12..."}
+                    style={{ ...inp, width: "100%", minHeight: 80, resize: "vertical", fontFamily: "Georgia, serif", boxSizing: "border-box" }}
+                    value={aiText}
+                    onChange={e => setAiText(e.target.value)}
+                  />
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12, color: "rgba(255,255,255,0.5)", border: "1px dashed rgba(255,255,255,0.15)", borderRadius: 2, padding: "6px 12px" }}>
+                      {aiImage ? <span style={{ color: "#C8FF00" }}>✓ {aiImage.name}</span> : <span>+ Attach photo</span>}
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => setAiImage(e.target.files[0] || null)} />
+                    </label>
+                    {aiImage && <button onClick={() => setAiImage(null)} style={{ background: "none", border: "none", color: "rgba(255,80,80,0.5)", cursor: "pointer", fontSize: 12 }}>Remove</button>}
+                    <button
+                      onClick={parseWithAI}
+                      disabled={aiParsing || (!aiText && !aiImage)}
+                      style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "8px 20px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: aiParsing ? "default" : "pointer", opacity: aiParsing || (!aiText && !aiImage) ? 0.5 : 1 }}
+                    >{aiParsing ? "Parsing…" : "Parse"}</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Date + Location */}
               <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Date</label>
@@ -538,6 +614,8 @@ export default function App() {
                   <input type="text" style={inp} value={newSession.location} onChange={e => setNewSession(s => ({ ...s, location: e.target.value }))} placeholder="YMCA with Susan" />
                 </div>
               </div>
+
+              {/* Exercises */}
               <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", marginBottom: 10 }}>Exercises</div>
               {newSession.exercises.map((ex, i) => (
                 <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -551,7 +629,7 @@ export default function App() {
               <button onClick={addExRow} style={{ background: "none", border: "1px dashed rgba(255,255,255,0.15)", borderRadius: 2, color: "rgba(255,255,255,0.4)", padding: "7px 16px", fontSize: 12, cursor: "pointer", marginTop: 4 }}>+ Add Exercise</button>
               <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                 <button onClick={saveSession} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "11px 24px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>Save Session</button>
-                <button onClick={() => setAdding(false)} style={{ background: "none", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 2, color: "rgba(255,255,255,0.5)", padding: "11px 20px", fontSize: 13, cursor: "pointer" }}>Cancel</button>
+                <button onClick={() => { setAdding(false); setAiMode(false); setAiText(""); setAiImage(null); }} style={{ background: "none", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 2, color: "rgba(255,255,255,0.5)", padding: "11px 20px", fontSize: 13, cursor: "pointer" }}>Cancel</button>
               </div>
             </div>
           )}

@@ -1,0 +1,81 @@
+import Anthropic from "npm:@anthropic-ai/sdk@^0.39.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const { description, image_base64, image_media_type } = await req.json();
+
+    if (!description && !image_base64) {
+      return new Response(JSON.stringify({ error: "Provide a description or image." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const client = new Anthropic();
+
+    const content: Anthropic.MessageParam["content"] = [];
+
+    if (image_base64) {
+      content.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: (image_media_type || "image/jpeg") as Anthropic.Base64ImageSource["media_type"],
+          data: image_base64,
+        },
+      });
+    }
+
+    content.push({
+      type: "text",
+      text: description || "Extract all exercises from this image.",
+    });
+
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1024,
+      system: `You are a fitness log parser. Extract workout exercises from the user's text or image.
+Return ONLY valid JSON with this exact structure — no markdown, no explanation:
+{
+  "exercises": [
+    { "name": "Exercise Name", "sets": "3", "reps": "10", "weight": "100kg" }
+  ],
+  "date": "YYYY-MM-DD or null",
+  "location": "location string or null"
+}
+Rules:
+- sets and reps are numeric strings ("3", "10")
+- weight is a free string ("100kg", "45lbs", "bodyweight", "")
+- Extract ALL exercises mentioned
+- If reps vary per set (e.g. 10/8/6), use the first value
+- If no weight mentioned, use ""
+- date and location are null if not mentioned`,
+      messages: [{ role: "user", content }],
+    });
+
+    const text = response.content[0].type === "text" ? response.content[0].text : "";
+
+    // Strip markdown code fences if present
+    const jsonStr = text.replace(/```(?:json)?\s*/g, "").replace(/```/g, "").trim();
+    const result = JSON.parse(jsonStr);
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error(err);
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Parse failed." }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
