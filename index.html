@@ -13,8 +13,48 @@
       ::-webkit-scrollbar { width: 4px; }
       ::-webkit-scrollbar-track { background: #111; }
       ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
-      input::placeholder { color: rgba(255,255,255,0.25); }
-      input:focus { border-color: #C8FF00 !important; outline: none; }
+      input::placeholder { color: rgba(255,255,255,0.4); }
+
+      /* AODA / WCAG 2.0 AA — Focus visibility */
+      /* Remove outline:none — keyboard users need visible focus indicators */
+      input:focus, textarea:focus, select:focus {
+        border-color: #C8FF00 !important;
+        outline: 2px solid #C8FF00;
+        outline-offset: 1px;
+      }
+      button:focus-visible, a:focus-visible {
+        outline: 2px solid #C8FF00;
+        outline-offset: 2px;
+        border-radius: 2px;
+      }
+      /* Suppress outline for mouse users only */
+      button:focus:not(:focus-visible), a:focus:not(:focus-visible) {
+        outline: none;
+      }
+
+      /* Skip to content link (WCAG 2.4.1) */
+      .skip-link {
+        position: absolute;
+        top: -100%;
+        left: 12px;
+        z-index: 9999;
+        background: #C8FF00;
+        color: #0e0e0e;
+        padding: 8px 16px;
+        font-family: 'Barlow Condensed', sans-serif;
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        text-decoration: none;
+        border-radius: 0 0 2px 2px;
+        transition: top 0.1s;
+      }
+      .skip-link:focus {
+        top: 0;
+        outline: 2px solid #0e0e0e;
+        outline-offset: -4px;
+      }
     </style>
   </head>
   <body>

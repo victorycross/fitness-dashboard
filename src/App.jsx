@@ -634,15 +634,15 @@ function PrivacyModal({ onClose }) {
     <li style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.7, marginBottom: 4 }}>{text}</li>
   );
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 200, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 16px", overflowY: "auto" }}>
+    <div role="dialog" aria-modal="true" aria-labelledby="privacy-modal-title" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 200, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 16px", overflowY: "auto" }}>
       <div style={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 2, width: "100%", maxWidth: 680, padding: "40px 48px 48px", position: "relative" }}>
-        <button onClick={onClose} style={{ position: "absolute", top: 20, right: 20, background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
+        <button onClick={onClose} aria-label="Close privacy policy" style={{ position: "absolute", top: 20, right: 20, background: "none", border: "none", color: "rgba(255,255,255,0.6)", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
 
         <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 8 }}>Legal</div>
-        <h2 style={{ margin: "0 0 4px", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 32, fontWeight: 900, color: "#fff" }}>Privacy Policy</h2>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>Effective date: April 12, 2026 · Last updated: April 12, 2026</div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 4 }}>Applies to: fitness.brightpathtechnology.io</div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>Operated by: David Martin, Ontario, Canada</div>
+        <h2 id="privacy-modal-title" style={{ margin: "0 0 4px", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 32, fontWeight: 900, color: "#fff" }}>Privacy Policy</h2>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginBottom: 8 }}>Effective date: April 12, 2026 · Last updated: April 12, 2026</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginBottom: 4 }}>Applies to: fitness.brightpathtechnology.io</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Operated by: David Martin, Ontario, Canada</div>
 
         {section("1. Overview")}
         {p('This Privacy Policy explains how Dave\'s Fitness Dashboard ("we", "us", or "our") collects, uses, stores, and protects your personal information. This application is operated by an individual in Ontario, Canada and is governed by Canada\'s Personal Information Protection and Electronic Documents Act (PIPEDA) and applicable Ontario privacy law.')}
@@ -709,9 +709,9 @@ function PrivacyModal({ onClose }) {
         {p("For any privacy-related questions, to exercise your rights, or to submit a complaint, please contact:")}
         <p style={{ margin: "0 0 4px", fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.7 }}>David Martin</p>
         <p style={{ margin: "0 0 4px", fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.7 }}>Ontario, Canada</p>
-        <p style={{ margin: "0", fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.7 }}>Email: victorycross@gmail.com</p>
+        <p style={{ margin: "0", fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.7 }}>Email: <a href="mailto:david@brightpathtechnology.io" style={{ color: "#C8FF00", textUnderlineOffset: 3 }}>david@brightpathtechnology.io</a></p>
 
-        <div style={{ marginTop: 36, paddingTop: 20, borderTop: "1px solid rgba(255,255,255,0.07)", fontSize: 11, color: "rgba(255,255,255,0.25)", lineHeight: 1.6 }}>
+        <div style={{ marginTop: 36, paddingTop: 20, borderTop: "1px solid rgba(255,255,255,0.07)", fontSize: 11, color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>
           This policy is governed by the laws of Ontario and Canada, including PIPEDA (S.C. 2000, c. 5). For complaints unresolved by contacting us directly, you may escalate to the Office of the Privacy Commissioner of Canada.
         </div>
 
@@ -748,6 +748,7 @@ function AuthForm({ onAuth, initialMode = "login" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -780,6 +781,13 @@ function AuthForm({ onAuth, initialMode = "login" }) {
       if (e) setError(e.message);
       else onAuth(data.user);
     } else {
+      // Validate invite code before creating account
+      if (!inviteCode.trim()) { setError("An invite code is required to create an account."); setLoading(false); return; }
+      const { data: codeValid, error: codeErr } = await supabase.rpc("check_invite_code", { p_code: inviteCode.trim() });
+      if (codeErr || !codeValid) {
+        setError("Invalid invite code. Check your invite email or contact us at david@brightpathtechnology.io for access.");
+        setLoading(false); return;
+      }
       const { data, error: e } = await supabase.auth.signUp({ email, password });
       setLoading(false);
       if (e) setError(e.message);
@@ -797,39 +805,43 @@ function AuthForm({ onAuth, initialMode = "login" }) {
       </h1>
       <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 32, fontStyle: "italic" }}>Track your training, weight, and goals.</div>
 
-      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: 32 }}>
+      <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, padding: 32 }}>
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#C8FF00", marginBottom: 24 }}>
           {mode === "login" ? "Sign In" : mode === "signup" ? "Create Account" : "Reset Password"}
         </div>
 
         {mode === "signup" && (
-          <div style={{ marginBottom: 16, padding: "10px 14px", background: "rgba(200,255,0,0.04)", border: "1px solid rgba(200,255,0,0.15)", borderRadius: 2, fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
-            Dave's Fitness is currently in beta and available by invite only. If you received an invite, create your account below.
+          <div role="note" style={{ marginBottom: 20, padding: "12px 16px", background: "rgba(200,255,0,0.07)", border: "1px solid rgba(200,255,0,0.25)", borderRadius: 2, fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.65 }}>
+            Dave's Fitness is currently in beta — available by invite only. If you received an invite, enter your invite code below to create your account.
           </div>
         )}
 
         <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Email</label>
-          <input type="email" style={inp} value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="you@example.com" />
+          <label htmlFor="auth-email" style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.65)", display: "block", marginBottom: 6 }}>
+            Email <span aria-hidden="true" style={{ color: "#f87171" }}>*</span>
+          </label>
+          <input id="auth-email" type="email" aria-required="true" style={inp} value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="you@example.com" autoComplete="email" />
         </div>
 
         {mode !== "reset" && (
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Password</label>
+            <label htmlFor="auth-password" style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.65)", display: "block", marginBottom: 6 }}>
+              Password <span aria-hidden="true" style={{ color: "#f87171" }}>*</span>
+            </label>
             <div style={{ position: "relative" }}>
-              <input type={showPw ? "text" : "password"} style={{ ...inp, paddingRight: 44 }} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder={mode === "signup" ? "12+ chars, uppercase, number, symbol" : "••••••••"} />
-              <button onClick={() => setShowPw(v => !v)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 13, padding: 0 }}>{showPw ? "Hide" : "Show"}</button>
+              <input id="auth-password" type={showPw ? "text" : "password"} aria-required="true" style={{ ...inp, paddingRight: 44 }} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder={mode === "signup" ? "12+ chars, uppercase, number, symbol" : "••••••••"} autoComplete={mode === "signup" ? "new-password" : "current-password"} />
+              <button type="button" onClick={() => setShowPw(v => !v)} aria-label={showPw ? "Hide password" : "Show password"} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: 13, padding: 0 }}>{showPw ? "Hide" : "Show"}</button>
             </div>
             {mode === "signup" && password && (
-              <div style={{ marginTop: 8 }}>
-                <div style={{ display: "flex", gap: 4 }}>
+              <div aria-live="polite" style={{ marginTop: 8 }}>
+                <div style={{ display: "flex", gap: 4 }} role="meter" aria-label="Password strength" aria-valuenow={strength.score} aria-valuemin={0} aria-valuemax={4}>
                   {[1,2,3,4].map(i => (
                     <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: strength.score >= i ? strength.color : "rgba(255,255,255,0.1)", transition: "background 0.2s" }} />
                   ))}
                 </div>
-                <div style={{ fontSize: 11, color: strength.color, marginTop: 4 }}>{strength.label}</div>
+                <div style={{ fontSize: 12, color: strength.color, marginTop: 4 }}>{strength.label}</div>
                 {strength.score < 4 && (
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 2 }}>
                     {!(/[A-Z]/.test(password)) && "Add uppercase · "}
                     {!(/[0-9]/.test(password)) && "Add number · "}
                     {!(/[^A-Za-z0-9]/.test(password)) && "Add symbol · "}
@@ -843,25 +855,37 @@ function AuthForm({ onAuth, initialMode = "login" }) {
 
         {mode === "signup" && (
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Confirm Password</label>
-            <input type={showPw ? "text" : "password"} style={{ ...inp, borderColor: confirmPw && confirmPw !== password ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.12)" }} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="••••••••" />
-            {confirmPw && confirmPw !== password && <div style={{ fontSize: 11, color: "#f87171", marginTop: 4 }}>Passwords don't match</div>}
+            <label htmlFor="auth-confirm-pw" style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.65)", display: "block", marginBottom: 6 }}>
+              Confirm Password <span aria-hidden="true" style={{ color: "#f87171" }}>*</span>
+            </label>
+            <input id="auth-confirm-pw" type={showPw ? "text" : "password"} aria-required="true" style={{ ...inp, borderColor: confirmPw && confirmPw !== password ? "rgba(248,113,113,0.6)" : "rgba(255,255,255,0.12)" }} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="••••••••" autoComplete="new-password" />
+            {confirmPw && confirmPw !== password && <div role="alert" style={{ fontSize: 12, color: "#f87171", marginTop: 4 }}>Passwords don't match</div>}
           </div>
         )}
 
-        {error && <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 2, padding: "10px 14px", fontSize: 13, color: "#f87171", marginBottom: 16 }}>{error}</div>}
-        {message && <div style={{ background: "rgba(200,255,0,0.06)", border: "1px solid rgba(200,255,0,0.2)", borderRadius: 2, padding: "10px 14px", fontSize: 13, color: "#C8FF00", marginBottom: 16 }}>{message}</div>}
+        {mode === "signup" && (
+          <div style={{ marginBottom: 16 }}>
+            <label htmlFor="auth-invite-code" style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.65)", display: "block", marginBottom: 6 }}>
+              Invite Code <span aria-hidden="true" style={{ color: "#f87171" }}>*</span>
+            </label>
+            <input id="auth-invite-code" type="text" aria-required="true" style={{ ...inp, textTransform: "uppercase", letterSpacing: 2 }} value={inviteCode} onChange={e => setInviteCode(e.target.value.toUpperCase())} onKeyDown={e => e.key === "Enter" && handleSubmit()} placeholder="BETA2026" autoComplete="off" />
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 5, lineHeight: 1.5 }}>Your code was included in your invite email. Need access? Email <a href="mailto:david@brightpathtechnology.io" style={{ color: "#C8FF00", textUnderlineOffset: 3 }}>david@brightpathtechnology.io</a></div>
+          </div>
+        )}
 
-        <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "12px 24px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 2, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
+        {error && <div id="auth-error" role="alert" aria-live="assertive" style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.4)", borderRadius: 2, padding: "10px 14px", fontSize: 13, color: "#f87171", marginBottom: 16 }}>{error}</div>}
+        {message && <div role="status" aria-live="polite" style={{ background: "rgba(200,255,0,0.07)", border: "1px solid rgba(200,255,0,0.3)", borderRadius: 2, padding: "10px 14px", fontSize: 13, color: "#C8FF00", marginBottom: 16 }}>{message}</div>}
+
+        <button type="button" onClick={handleSubmit} disabled={loading} style={{ width: "100%", background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "12px 24px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 2, textTransform: "uppercase", cursor: loading ? "default" : "pointer", opacity: loading ? 0.7 : 1 }}>
           {loading ? "Please wait…" : mode === "login" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Reset Link"}
         </button>
 
         <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
           {mode === "login" && <>
-            <button onClick={() => { setMode("signup"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 13, cursor: "pointer" }}>Don't have an account? Sign up</button>
-            <button onClick={() => { setMode("reset"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", fontSize: 12, cursor: "pointer" }}>Forgot password?</button>
+            <button type="button" onClick={() => { setMode("signup"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.65)", fontSize: 13, cursor: "pointer" }}>Don't have an account? Sign up</button>
+            <button type="button" onClick={() => { setMode("reset"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.55)", fontSize: 12, cursor: "pointer" }}>Forgot password?</button>
           </>}
-          {mode !== "login" && <button onClick={() => { setMode("login"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 13, cursor: "pointer" }}>Back to sign in</button>}
+          {mode !== "login" && <button type="button" onClick={() => { setMode("login"); setError(""); setMessage(""); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.65)", fontSize: 13, cursor: "pointer" }}>Back to sign in</button>}
         </div>
       </div>
 
@@ -903,6 +927,9 @@ function LandingPage({ onAuth }) {
     <div style={{ background: "#0e0e0e", color: "#fff", minHeight: "100vh", fontFamily: "Georgia, serif" }}>
       {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
 
+      {/* Skip to main content (WCAG 2.4.1) */}
+      <a href="#main-content" className="skip-link">Skip to main content</a>
+
       {/* Auth modal */}
       {showAuth && (
         <div
@@ -928,6 +955,7 @@ function LandingPage({ onAuth }) {
       </nav>
 
       {/* Hero */}
+      <main id="main-content">
       <section style={{ maxWidth: 960, margin: "0 auto", padding: "96px 40px 80px", textAlign: "center" }}>
         <div style={{ display: "inline-block", background: "rgba(200,255,0,0.07)", border: "1px solid rgba(200,255,0,0.2)", borderRadius: 20, padding: "4px 16px", marginBottom: 28, fontSize: 11, color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 3, textTransform: "uppercase" }}>
           Invite Only · Currently Free
@@ -942,7 +970,7 @@ function LandingPage({ onAuth }) {
           <button onClick={openSignup} style={{ ...btn, padding: "15px 40px", fontSize: 14 }}>Request Early Access</button>
           <button onClick={openLogin}  style={{ ...btnGhost, padding: "15px 40px", fontSize: 14 }}>Sign In →</button>
         </div>
-        <div style={{ marginTop: 28, color: "rgba(255,255,255,0.18)", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2 }}>Invite-only beta · Ontario, Canada</div>
+        <div style={{ marginTop: 28, color: "rgba(255,255,255,0.55)", fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2 }}>Invite-only beta · Ontario, Canada</div>
       </section>
 
       {/* Features */}
@@ -957,7 +985,7 @@ function LandingPage({ onAuth }) {
               <div key={i} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", padding: "32px 28px" }}>
                 <div style={{ color: "#C8FF00", fontSize: 26, marginBottom: 14, fontFamily: "monospace", lineHeight: 1 }}>{f.icon}</div>
                 <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, letterSpacing: 0.5, marginBottom: 10, color: "#fff" }}>{f.title}</div>
-                <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, lineHeight: 1.8 }}>{f.desc}</div>
+                <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, lineHeight: 1.8 }}>{f.desc}</div>
               </div>
             ))}
           </div>
@@ -969,14 +997,14 @@ function LandingPage({ onAuth }) {
         <div style={{ maxWidth: 840, margin: "0 auto", textAlign: "center" }}>
           <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 16 }}>Design Your Program</div>
           <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 40, fontWeight: 900, margin: "0 0 24px", color: "#fff", lineHeight: 1.1 }}>No cookie-cutter plans. Just yours.</h2>
-          <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 16, lineHeight: 1.9, marginBottom: 44, maxWidth: 620, margin: "0 auto 44px" }}>
+          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 16, lineHeight: 1.9, marginBottom: 44, maxWidth: 620, margin: "0 auto 44px" }}>
             Set where you train, how often you want to work out, who your trainer is, and what you're working toward — both this month and this year. Every chart and reminder adapts to the targets <em>you</em> set.
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, textAlign: "left" }}>
             {["Workout locations & gym names", "Weekly session & calorie targets", "Trainer name & contact", "Short and long-term objectives", "BMI and body composition goals", "Progress photo milestones"].map((item, i) => (
               <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <span style={{ color: "#C8FF00", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>
-                <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.65 }}>{item}</span>
+                <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 14, lineHeight: 1.65 }}>{item}</span>
               </div>
             ))}
           </div>
@@ -989,7 +1017,7 @@ function LandingPage({ onAuth }) {
           <div>
             <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 16 }}>Your Privacy</div>
             <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 36, fontWeight: 900, margin: "0 0 20px", color: "#fff", lineHeight: 1.15 }}>Your data belongs to you. Full stop.</h2>
-            <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 15, lineHeight: 1.85, marginBottom: 28 }}>
+            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 15, lineHeight: 1.85, marginBottom: 28 }}>
               We collect only what you enter. We use that data for one purpose: helping you track your progress. No ads. No selling. No exceptions.
             </p>
             <button onClick={() => setShowPrivacy(true)} style={{ background: "none", border: "1px solid rgba(200,255,0,0.3)", borderRadius: 2, color: "#C8FF00", padding: "9px 20px", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2, textTransform: "uppercase" }}>Read Privacy Policy</button>
@@ -1005,7 +1033,7 @@ function LandingPage({ onAuth }) {
                 <div style={{ color: "#C8FF00", fontSize: 18, flexShrink: 0, marginTop: 2, fontFamily: "monospace" }}>{item.icon}</div>
                 <div>
                   <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, marginBottom: 3, color: "#fff" }}>{item.title}</div>
-                  <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, lineHeight: 1.7 }}>{item.desc}</div>
+                  <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 13, lineHeight: 1.7 }}>{item.desc}</div>
                 </div>
               </div>
             ))}
@@ -1019,7 +1047,7 @@ function LandingPage({ onAuth }) {
           <div style={{ textAlign: "center", marginBottom: 56 }}>
             <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 12 }}>Pricing</div>
             <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 40, fontWeight: 900, margin: "0 0 12px", color: "#fff" }}>Simple plans, no surprises</h2>
-            <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 14, fontStyle: "italic" }}>All features are free during the beta period.</div>
+            <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 14, fontStyle: "italic" }}>All features are free during the beta period.</div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 2 }}>
             {PLANS.map((plan, i) => (
@@ -1027,7 +1055,7 @@ function LandingPage({ onAuth }) {
                 <div style={{ position: "absolute", top: 16, right: 16, background: plan.active ? "rgba(200,255,0,0.1)" : "rgba(255,255,255,0.05)", border: `1px solid ${plan.active ? "rgba(200,255,0,0.25)" : "rgba(255,255,255,0.08)"}`, borderRadius: 20, padding: "2px 10px", fontSize: 9, color: plan.active ? "#C8FF00" : "rgba(255,255,255,0.25)", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2, textTransform: "uppercase" }}>{plan.badge}</div>
                 <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 24, fontWeight: 900, letterSpacing: 1, marginBottom: 6, color: "#fff" }}>{plan.name}</div>
                 <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 34, fontWeight: 700, color: plan.active ? "#C8FF00" : "rgba(255,255,255,0.2)", marginBottom: 16 }}>{plan.price}</div>
-                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, lineHeight: 1.75, marginBottom: 28 }}>{plan.desc}</div>
+                <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, lineHeight: 1.75, marginBottom: 28 }}>{plan.desc}</div>
                 <button onClick={plan.active ? openSignup : undefined} disabled={!plan.active} style={{ ...btn, width: "100%", textAlign: "center", opacity: plan.active ? 1 : 0.25, cursor: plan.active ? "pointer" : "default" }}>
                   {plan.active ? "Get Started" : "Coming Soon"}
                 </button>
@@ -1042,7 +1070,7 @@ function LandingPage({ onAuth }) {
         <div style={{ maxWidth: 580, margin: "0 auto" }}>
           <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", marginBottom: 16 }}>Beta Access</div>
           <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 42, fontWeight: 900, margin: "0 0 20px", color: "#fff", lineHeight: 1.05 }}>Got an invite?</h2>
-          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 16, lineHeight: 1.85, marginBottom: 40 }}>
+          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 16, lineHeight: 1.85, marginBottom: 40 }}>
             Dave's Fitness is currently in closed beta. If a member has invited you, create your account below — it takes under a minute. Members can send invites directly from their Profile tab.
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
@@ -1052,15 +1080,29 @@ function LandingPage({ onAuth }) {
         </div>
       </section>
 
+      </main>
+
       {/* Footer */}
-      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "24px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: 1, color: "#fff" }}>Dave's Fitness</span>
-          <span style={{ color: "rgba(255,255,255,0.18)", fontSize: 11 }}>© {new Date().getFullYear()} · Ontario, Canada</span>
-        </div>
-        <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-          <button onClick={() => setShowPrivacy(true)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", fontSize: 12, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>Privacy Policy</button>
-          <button onClick={openLogin} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", fontSize: 12, cursor: "pointer" }}>Sign In</button>
+      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "32px 40px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 24 }}>
+          <div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: 1, color: "#fff", marginBottom: 6 }}>Dave's Fitness</div>
+            <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, lineHeight: 1.7 }}>© {new Date().getFullYear()} · Ontario, Canada</div>
+            <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, lineHeight: 1.7, marginTop: 2 }}>
+              Committed to AODA / WCAG 2.0 Level AA accessibility.
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 180 }}>
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 4 }}>Support</div>
+            <a href="mailto:david@brightpathtechnology.io" style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, textDecoration: "none" }}>david@brightpathtechnology.io</a>
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", marginTop: 8, marginBottom: 4 }}>Legal</div>
+            <button onClick={() => setShowPrivacy(true)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.7)", fontSize: 13, cursor: "pointer", textAlign: "left", padding: 0, textDecoration: "underline", textUnderlineOffset: 3 }}>Privacy Policy</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", fontFamily: "'Barlow Condensed', sans-serif", marginBottom: 4 }}>Account</div>
+            <button onClick={openLogin}  style={{ background: "none", border: "none", color: "rgba(255,255,255,0.7)", fontSize: 13, cursor: "pointer", textAlign: "left", padding: 0 }}>Sign In</button>
+            <button onClick={openSignup} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.7)", fontSize: 13, cursor: "pointer", textAlign: "left", padding: 0 }}>Create Account</button>
+          </div>
         </div>
       </footer>
     </div>
