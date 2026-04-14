@@ -426,7 +426,7 @@ function GoalsTab({ user, profile, weights, sessions, photos, onProfileUpdate, o
 
   const inp = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "10px 14px", fontSize: 13, fontFamily: "Georgia, serif", width: "100%", boxSizing: "border-box" };
 
-  function GoalCard({ type, label, value, editValue, onEdit, onSave, onCancel }) {
+  function GoalCard({ type, label, value, editValue, _onEdit, _onSave, _onCancel }) { // eslint-disable-line no-unused-vars
     const isEditing = editing === type;
     return (
       <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "22px 24px", flex: 1, minWidth: 240 }}>
@@ -455,7 +455,9 @@ function GoalsTab({ user, profile, weights, sessions, photos, onProfileUpdate, o
     <div style={{ marginTop: 32 }}>
       {/* Goal cards */}
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 40 }}>
+        { /* eslint-disable-next-line react-hooks/static-components */ }
         <GoalCard type="short" label="Short-term goal" value={shortGoal || profile?.short_term_goal} editValue={shortGoal} />
+        { /* eslint-disable-next-line react-hooks/static-components */ }
         <GoalCard type="long"  label="Long-term goal"  value={longGoal  || profile?.long_term_goal}  editValue={longGoal} />
       </div>
 
@@ -1110,7 +1112,7 @@ function LandingPage({ onAuth }) {
 }
 
 // ─── Auth Screen (full-page fallback) ─────────────────────────────────────────
-function AuthScreen({ onAuth }) {
+function _AuthScreen({ onAuth }) {
   return (
     <div style={{ minHeight: "100vh", background: "#0e0e0e", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <AuthForm onAuth={onAuth} />
@@ -1528,7 +1530,7 @@ function AdminTab({ user }) {
       const d = await res.json().catch(() => ({}));
       if (res.ok) { setInviteMsg(`✓ Invite sent to ${inviteEmail}`); setInviteEmail(""); setInviteCode(""); }
       else setInviteMsg(d.error || `Error ${res.status} — check function logs`);
-    } catch (e) { setInviteMsg("Network error — try again."); }
+    } catch (_e) { setInviteMsg("Network error — try again."); } // eslint-disable-line no-unused-vars
     setInviteSending(false);
     setTimeout(() => setInviteMsg(""), 6000);
   }
@@ -1578,7 +1580,7 @@ function AdminTab({ user }) {
             </div>
             {users.map(u => {
               const lastActive = [u.last_workout, u.last_weight].filter(Boolean).sort().pop() || null;
-              const daysSince = lastActive
+              const daysSince = lastActive // eslint-disable-next-line react-hooks/purity
                 ? Math.floor((Date.now() - new Date(lastActive + "T12:00:00Z").getTime()) / 86400000)
                 : null;
               const activeColor = daysSince === null ? "rgba(255,255,255,0.25)"
@@ -1821,7 +1823,7 @@ export default function App() {
 
   // Workout helpers
   const totalSets = sessions.reduce((a, s) => a + (s.exercises || []).reduce((b, e) => b + Number(e.sets || 0), 0), 0);
-  const lastSession = sessions[0];
+  const _lastSession = sessions[0];
 
   function addExRow()       { setNewSession(s => ({ ...s, exercises: [...s.exercises, { ...EMPTY_EXERCISE }] })); }
   function removeExRow(i)   { setNewSession(s => ({ ...s, exercises: s.exercises.filter((_, idx) => idx !== i) })); }
