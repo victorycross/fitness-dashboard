@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { LineChart, BarChart, Bar, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer } from "recharts";
 import { supabase } from "./supabase.js";
+import FoodTab from "./FoodTab.jsx";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const EMPTY_EXERCISE = { name: "", sets: "", reps: "", weight: "" };
@@ -2002,6 +2003,7 @@ export default function App() {
           ["workouts", "Workouts"],
           ["weight",   "Weight & BMI"],
           ["goals",    "Goals"],
+          ["food",     "Food"],
           ["profile",  "Profile"],
           ...(user.email === ADMIN_EMAIL ? [["admin", "Admin"]] : []),
         ].map(([key, label]) => (
@@ -2234,6 +2236,11 @@ export default function App() {
           <GoalsTab user={user} profile={profile} weights={weights} sessions={sessions}
             photos={photos} onProfileUpdate={updates => setProfile(p => ({ ...p, ...updates }))}
             onPhotosChange={loadData} />
+        )}
+
+        {/* FOOD TAB */}
+        {tab === "food" && (
+          <FoodTab supabase={supabase} user={user} toast={msg => { setToast(msg); setTimeout(() => setToast(""), 2500); }} />
         )}
 
         {/* PROFILE TAB */}
