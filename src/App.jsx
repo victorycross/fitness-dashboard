@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { LineChart, BarChart, Bar, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer } from "recharts";
 import { supabase } from "./supabase.js";
 import FoodTab from "./FoodTab.jsx";
+import DashboardTab from "./DashboardTab.jsx";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const EMPTY_EXERCISE = { name: "", sets: "", reps: "", weight: "" };
@@ -1744,7 +1745,7 @@ export default function App() {
   const [weights, setWeights]         = useState([]);
   const [photos, setPhotos]           = useState([]);
   const [loading, setLoading]         = useState(true);
-  const [tab, setTab]                 = useState("workouts");
+  const [tab, setTab]                 = useState("dashboard");
   const [activeSession, setActiveSession] = useState(null);
   const [adding, setAdding]           = useState(false);
   const [aiMode, setAiMode]           = useState(false);
@@ -2000,6 +2001,7 @@ export default function App() {
       {/* Tabs */}
       <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "0 clamp(16px, 5vw, 40px)" }}>
         {[
+          ["dashboard", "Dashboard"],
           ["workouts", "Workouts"],
           ["weight",   "Weight & BMI"],
           ["goals",    "Goals"],
@@ -2012,6 +2014,11 @@ export default function App() {
       </div>
 
       <div style={{ padding: "0 clamp(16px, 5vw, 40px)" }}>
+
+        {/* DASHBOARD TAB */}
+        {tab === "dashboard" && (
+          <DashboardTab supabase={supabase} user={user} profile={profile} sessions={sessions} weights={weights} />
+        )}
 
         {/* WORKOUTS TAB */}
         {tab === "workouts" && <>

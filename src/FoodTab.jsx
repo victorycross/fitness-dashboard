@@ -12,7 +12,7 @@
  * Database: reads/writes the `food_log` table (see migration).
  * AI parse: calls the `parse-food` Supabase Edge Function.
  */
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 /* ── Style constants (matching fitness dashboard) ───────────────── */
 const ACCENT = "#C8FF00";
@@ -75,8 +75,12 @@ const label = {
 };
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
+// Local-timezone YYYY-MM-DD. `en-CA` locale happens to be ISO-formatted.
+function localDateStr(d = new Date()) {
+  return d.toLocaleDateString("en-CA");
+}
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return localDateStr();
 }
 
 function shortDate(d) {
@@ -125,27 +129,43 @@ export default function FoodTab({ supabase, user, toast }) {
   const [showHistory, setShowHistory] = useState(false);
   const [historyDays, setHistoryDays] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [finalized, setFinalized] = useState(false);
 
-  /* ── Load entries for selected date ───────────────────────────── */
+  /* ── Load entries + finalized status for selected date ────────── */
   const loadEntries = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("food_log")
-      .select("*")
-      .eq("date", selectedDate)
-      .order("created_at", { ascending: true });
+    const [entriesRes, statusRes] = await Promise.all([
+      supabase.from("food_log").select("*").eq("date", selectedDate).order("created_at", { ascending: true }),
+      supabase.from("food_day_status").select("date").eq("date", selectedDate).maybeSingle(),
+    ]);
 
-    if (error) {
-      console.error("food_log load error:", error);
+    if (entriesRes.error) {
+      console.error("food_log load error:", entriesRes.error);
       toast?.("Failed to load food log.");
     }
-    setEntries(data || []);
+    setEntries(entriesRes.data || []);
+    setFinalized(!!statusRes.data);
     setLoading(false);
   }, [supabase, selectedDate, toast]);
 
   useEffect(() => {
     loadEntries();
   }, [loadEntries]);
+
+  /* ── Toggle finalized for selected date ──────────────────────── */
+  async function toggleFinalized() {
+    if (finalized) {
+      const { error } = await supabase.from("food_day_status").delete().eq("date", selectedDate);
+      if (error) { toast?.("Failed to reopen day."); return; }
+      setFinalized(false);
+      toast?.("Day reopened.");
+    } else {
+      const { error } = await supabase.from("food_day_status").insert({ user_id: user.id, date: selectedDate });
+      if (error) { toast?.("Failed to finalize day."); return; }
+      setFinalized(true);
+      toast?.("Day marked as finished ✓");
+    }
+  }
 
   /* ── Daily totals ─────────────────────────────────────────────── */
   const totals = entries.reduce(
@@ -224,7 +244,7 @@ export default function FoodTab({ supabase, user, toast }) {
     setHistoryLoading(true);
     const since = new Date();
     since.setDate(since.getDate() - 13);
-    const sinceStr = since.toISOString().slice(0, 10);
+    const sinceStr = localDateStr(since);
 
     const { data, error } = await supabase
       .from("food_log")
@@ -258,7 +278,7 @@ export default function FoodTab({ supabase, user, toast }) {
   function shiftDate(delta) {
     const d = new Date(selectedDate + "T00:00:00");
     d.setDate(d.getDate() + delta);
-    setSelectedDate(d.toISOString().slice(0, 10));
+    setSelectedDate(localDateStr(d));
   }
 
   /* ── Render ────────────────────────────────────────────────────── */
@@ -313,7 +333,22 @@ export default function FoodTab({ supabase, user, toast }) {
       {/* ── Daily totals ────────────────────────────────────────── */}
       {entries.length > 0 && (
         <div style={{ ...card, borderLeft: `3px solid ${ACCENT}` }}>
-          <div style={{ ...label, marginBottom: 10 }}>Daily Totals</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 12, flexWrap: "wrap" }}>
+            <div style={label}>Daily Totals {finalized && <span style={{ color: ACCENT, marginLeft: 8 }}>· Finished ✓</span>}</div>
+            <button
+              onClick={toggleFinalized}
+              style={{
+                ...btn,
+                background: finalized ? "transparent" : ACCENT,
+                color: finalized ? ACCENT : BG,
+                border: `1px solid ${ACCENT}`,
+                padding: "8px 14px",
+                fontSize: 12,
+              }}
+            >
+              {finalized ? "Reopen Day" : "Finished for the day"}
+            </button>
+          </div>
           <NutritionBar {...totals} />
           {totals.fibre_g > 0 && (
             <div style={{ fontSize: 13, color: DIM, marginTop: 6, fontFamily: "'Barlow Condensed', sans-serif" }}>
