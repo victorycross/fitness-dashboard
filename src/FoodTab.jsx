@@ -13,6 +13,7 @@
  * AI parse: calls the `parse-food` Supabase Edge Function.
  */
 import { useState, useEffect, useCallback } from "react";
+import { localDateStr } from "./utils/date.js";
 
 /* ── Style constants (matching fitness dashboard) ───────────────── */
 const ACCENT = "#C8FF00";
@@ -75,10 +76,6 @@ const label = {
 };
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
-// Local-timezone YYYY-MM-DD. `en-CA` locale happens to be ISO-formatted.
-function localDateStr(d = new Date()) {
-  return d.toLocaleDateString("en-CA");
-}
 function todayStr() {
   return localDateStr();
 }
@@ -228,6 +225,45 @@ export default function FoodTab({ supabase, user, toast }) {
     setParsing(false);
   }
 
+  /* ── Export selected day as HealthKit sample JSON ─────────────── */
+  function exportHealthKit() {
+    if (entries.length === 0) {
+      toast?.("Nothing to export for this day.");
+      return;
+    }
+    const samples = [];
+    for (const e of entries) {
+      const ts = e.created_at || `${e.date}T12:00:00`;
+      const note = e.name;
+      const pairs = [
+        ["dietaryEnergyConsumed", Number(e.calories), "kcal"],
+        ["dietaryProtein", Number(e.protein_g), "g"],
+        ["dietaryCarbohydrates", Number(e.carbs_g), "g"],
+        ["dietaryFatTotal", Number(e.fat_g), "g"],
+        ["dietaryFiber", Number(e.fibre_g || 0), "g"],
+      ];
+      for (const [type, value, unit] of pairs) {
+        if (value > 0) samples.push({ type, value: +value.toFixed(2), unit, date: ts, note });
+      }
+    }
+    const payload = {
+      date: selectedDate,
+      generated: new Date().toISOString(),
+      sample_count: samples.length,
+      samples,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `healthkit_samples_${selectedDate}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast?.(`Exported ${samples.length} HealthKit samples.`);
+  }
+
   /* ── Delete entry ─────────────────────────────────────────────── */
   async function handleDelete(id) {
     const { error } = await supabase.from("food_log").delete().eq("id", id);
@@ -335,19 +371,35 @@ export default function FoodTab({ supabase, user, toast }) {
         <div style={{ ...card, borderLeft: `3px solid ${ACCENT}` }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 12, flexWrap: "wrap" }}>
             <div style={label}>Daily Totals {finalized && <span style={{ color: ACCENT, marginLeft: 8 }}>· Finished ✓</span>}</div>
-            <button
-              onClick={toggleFinalized}
-              style={{
-                ...btn,
-                background: finalized ? "transparent" : ACCENT,
-                color: finalized ? ACCENT : BG,
-                border: `1px solid ${ACCENT}`,
-                padding: "8px 14px",
-                fontSize: 12,
-              }}
-            >
-              {finalized ? "Reopen Day" : "Finished for the day"}
-            </button>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                onClick={exportHealthKit}
+                style={{
+                  ...btn,
+                  background: "transparent",
+                  color: ACCENT,
+                  border: `1px solid ${ACCENT}`,
+                  padding: "8px 14px",
+                  fontSize: 12,
+                }}
+                title="Download HealthKit samples JSON for this day"
+              >
+                ↓ Apple Health JSON
+              </button>
+              <button
+                onClick={toggleFinalized}
+                style={{
+                  ...btn,
+                  background: finalized ? "transparent" : ACCENT,
+                  color: finalized ? ACCENT : BG,
+                  border: `1px solid ${ACCENT}`,
+                  padding: "8px 14px",
+                  fontSize: 12,
+                }}
+              >
+                {finalized ? "Reopen Day" : "Finished for the day"}
+              </button>
+            </div>
           </div>
           <NutritionBar {...totals} />
           {totals.fibre_g > 0 && (

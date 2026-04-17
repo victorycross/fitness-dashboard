@@ -3,6 +3,7 @@ import { LineChart, BarChart, Bar, Line, XAxis, YAxis, Tooltip, ReferenceLine, R
 import { supabase } from "./supabase.js";
 import FoodTab from "./FoodTab.jsx";
 import DashboardTab from "./DashboardTab.jsx";
+import { localDateStr } from "./utils/date.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const EMPTY_EXERCISE = { name: "", sets: "", reps: "", weight: "" };
@@ -67,8 +68,8 @@ function getLast8Weeks(sessions) {
     mon.setDate(ref.getDate() - (dow === 0 ? 6 : dow - 1));
     const sun = new Date(mon);
     sun.setDate(mon.getDate() + 6);
-    const monStr = mon.toISOString().split("T")[0];
-    const sunStr = sun.toISOString().split("T")[0];
+    const monStr = localDateStr(mon);
+    const sunStr = localDateStr(sun);
     const count = sessions.filter(s => s.date >= monStr && s.date <= sunStr).length;
     result.push({ week: shortDate(monStr), count });
   }
@@ -167,7 +168,7 @@ function OnboardingWizard({ user, onComplete }) {
       const kg = parseFloat(data.initial_weight);
       if (!isNaN(kg)) {
         await supabase.from("weight_log").upsert({
-          user_id: user.id, date: new Date().toISOString().split("T")[0], kg,
+          user_id: user.id, date: localDateStr(), kg,
           body_fat_pct: parseFloat(data.initial_body_fat) || null,
         }, { onConflict: "date,user_id" });
       }
@@ -369,7 +370,7 @@ function GoalsTab({ user, profile, weights, sessions, photos, onProfileUpdate, o
   const [showUpload, setShowUpload] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadPreview, setUploadPreview] = useState(null);
-  const [uploadDate, setUploadDate] = useState(new Date().toISOString().split("T")[0]);
+  const [uploadDate, setUploadDate] = useState(localDateStr());
   const [uploadCaption, setUploadCaption] = useState("");
   const [uploadIsBefore, setUploadIsBefore] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -522,7 +523,7 @@ function GoalsTab({ user, profile, weights, sessions, photos, onProfileUpdate, o
       <div style={{ marginTop: 24 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>Visual Progress</div>
-          <button onClick={() => { setShowUpload(true); setUploadDate(new Date().toISOString().split("T")[0]); }}
+          <button onClick={() => { setShowUpload(true); setUploadDate(localDateStr()); }}
             style={{ background: "rgba(200,255,0,0.08)", border: "1px solid rgba(200,255,0,0.25)", borderRadius: 2, color: "#C8FF00", padding: "6px 14px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
             + Add Photo
           </button>
@@ -1135,7 +1136,11 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
     weekly_cal_target: profile?.weekly_cal_target ?? 1500,
     short_term_goal: profile?.short_term_goal || "",
     long_term_goal: profile?.long_term_goal || "",
+    food_export_emails: profile?.food_export_emails || [],
+    food_export_daily: profile?.food_export_daily ?? false,
+    food_export_weekly: profile?.food_export_weekly ?? false,
   });
+  const [exportEmailInput, setExportEmailInput] = useState("");
   const [locations, setLocations] = useState(profile?.workout_locations || []);
   const [locInputType, setLocInputType] = useState(null);
   const [locInput, setLocInput] = useState("");
@@ -1347,6 +1352,85 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
               ? <>Sends a daily email when you haven't logged a workout in 3 days or weight in 7 days. Every email includes a one-click unsubscribe link — or toggle this off and save to stop immediately.</>
               : <>Reminders are off. Toggle on to receive daily nudge emails when your workout or weight log falls behind.</>
             }
+          </div>
+        </div>
+        {/* Food exports */}
+        <div style={{ gridColumn: "1/-1", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginTop: 4 }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>Food Exports</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.7, marginBottom: 14 }}>
+            Email a summary of your food log to one or more recipients. Daily runs each evening for today's entries; weekly runs Sunday night with the past 7 days.
+          </div>
+
+          {/* Email chips */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Recipient emails</label>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input
+                type="email"
+                style={{ ...inp, flex: 1 }}
+                placeholder="coach@example.com"
+                value={exportEmailInput}
+                onChange={e => setExportEmailInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const v = exportEmailInput.trim();
+                    if (v && !form.food_export_emails.includes(v)) {
+                      setForm(f => ({ ...f, food_export_emails: [...f.food_export_emails, v] }));
+                      setExportEmailInput("");
+                    }
+                  }
+                }}
+              />
+              <button
+                onClick={() => {
+                  const v = exportEmailInput.trim();
+                  if (v && !form.food_export_emails.includes(v)) {
+                    setForm(f => ({ ...f, food_export_emails: [...f.food_export_emails, v] }));
+                    setExportEmailInput("");
+                  }
+                }}
+                style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "6px 14px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, cursor: "pointer" }}
+              >Add</button>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {form.food_export_emails.map((email, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(200,255,0,0.06)", border: "1px solid rgba(200,255,0,0.15)", borderRadius: 2, padding: "4px 8px" }}>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.8)" }}>{email}</span>
+                  <button
+                    onClick={() => setForm(f => ({ ...f, food_export_emails: f.food_export_emails.filter((_, idx) => idx !== i) }))}
+                    style={{ background: "none", border: "none", color: "rgba(255,80,80,0.5)", cursor: "pointer", fontSize: 13, padding: 0, marginLeft: 2, lineHeight: 1 }}
+                  >×</button>
+                </div>
+              ))}
+              {form.food_export_emails.length === 0 && (
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>No recipients yet.</span>
+              )}
+            </div>
+          </div>
+
+          {/* Daily / Weekly toggles */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: form.food_export_emails.length ? "pointer" : "not-allowed", opacity: form.food_export_emails.length ? 1 : 0.4 }}>
+              <input
+                type="checkbox"
+                checked={form.food_export_daily}
+                disabled={form.food_export_emails.length === 0}
+                onChange={e => setForm(f => ({ ...f, food_export_daily: e.target.checked }))}
+                style={{ accentColor: "#C8FF00", width: 16, height: 16 }}
+              />
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>Daily summary (each evening)</span>
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: form.food_export_emails.length ? "pointer" : "not-allowed", opacity: form.food_export_emails.length ? 1 : 0.4 }}>
+              <input
+                type="checkbox"
+                checked={form.food_export_weekly}
+                disabled={form.food_export_emails.length === 0}
+                onChange={e => setForm(f => ({ ...f, food_export_weekly: e.target.checked }))}
+                style={{ accentColor: "#C8FF00", width: 16, height: 16 }}
+              />
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>Weekly summary (Sunday night)</span>
+            </label>
           </div>
         </div>
       </div>
@@ -1755,7 +1839,7 @@ export default function App() {
   const [newSession, setNewSession]   = useState({ date: "", location: "", exercises: [{ ...EMPTY_EXERCISE }] });
   const [newWeight, setNewWeight]     = useState("");
   const [newBodyFat, setNewBodyFat]   = useState("");
-  const [newWeightDate, setNewWeightDate] = useState(new Date().toISOString().split("T")[0]);
+  const [newWeightDate, setNewWeightDate] = useState(localDateStr());
   const [toast, setToast]             = useState("");
   const [error, setError]             = useState("");
   const [showPrivacy, setShowPrivacy] = useState(false);
@@ -1854,7 +1938,7 @@ export default function App() {
         image_base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
         image_media_type = aiImage.type || "image/jpeg";
       }
-      const today = new Date().toISOString().split("T")[0];
+      const today = localDateStr();
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
       const res = await fetch(
@@ -1915,7 +1999,7 @@ export default function App() {
   const weekStart = (() => {
     const d = new Date(); const dow = d.getDay();
     d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
-    return d.toISOString().split("T")[0];
+    return localDateStr(d);
   })();
   const thisWeekSessions = sessions.filter(s => s.date >= weekStart);
   const thisWeekCals     = thisWeekSessions.reduce((a, s) => a + (s.calories_est || 0), 0);

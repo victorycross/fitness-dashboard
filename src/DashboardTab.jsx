@@ -4,13 +4,10 @@
  */
 import { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { localDateStr } from "./utils/date.js";
 
 const ACCENT = "#C8FF00";
 const DIM = "rgba(255,255,255,0.4)";
-
-function localDateStr(d = new Date()) {
-  return d.toLocaleDateString("en-CA");
-}
 
 function Card({ children, accent }) {
   return (
