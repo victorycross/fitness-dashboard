@@ -255,7 +255,7 @@ function OnboardingWizard({ user, onComplete }) {
             <div>
               <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: "#C8FF00", marginBottom: 4 }}>Your measurements</div>
               <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 24 }}>Used to calculate BMI and track progress. All fields optional.</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div className="stack-mobile" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 <div>
                   <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Height (cm)</label>
                   <input type="number" style={inp} placeholder="e.g. 175" value={data.height_cm} onChange={e => set("height_cm", e.target.value)} />
@@ -314,7 +314,7 @@ function OnboardingWizard({ user, onComplete }) {
             <div>
               <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: "#C8FF00", marginBottom: 4 }}>Targets & goals</div>
               <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 24 }}>Set your weekly targets and describe what you're working toward.</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+              <div className="stack-mobile" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
                 <div>
                   <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Sessions / week</label>
                   <input type="number" min="1" max="14" style={inp} value={data.weekly_sessions_target} onChange={e => set("weekly_sessions_target", parseInt(e.target.value) || 3)} />
@@ -1252,7 +1252,7 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+      <div className="stack-mobile" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
         {/* Name */}
         <div style={{ gridColumn: "1/-1" }}>
           <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Full Name</label>
@@ -1314,7 +1314,7 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
         {/* Weekly targets */}
         <div style={{ gridColumn: "1/-1", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginTop: 4 }}>
           <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>Weekly Targets</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="stack-mobile" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Sessions / week</label>
               <input type="number" min="1" max="14" style={inp} value={form.weekly_sessions_target} onChange={e => setForm(f => ({ ...f, weekly_sessions_target: parseInt(e.target.value) || 3 }))} placeholder="3" />
@@ -2083,7 +2083,7 @@ export default function App() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "0 clamp(16px, 5vw, 40px)" }}>
+      <div className="tab-bar" style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "0 clamp(16px, 5vw, 40px)" }}>
         {[
           ["dashboard", "Dashboard"],
           ["workouts", "Workouts"],
