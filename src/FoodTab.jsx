@@ -1,18 +1,22 @@
 /**
- * FoodTab — React component for the Food Tracker tab.
+ * FoodTab — Food Tracker tab with 7-day strip and drag-to-move entries.
  *
- * Drop this into the fitness dashboard's App.jsx as a sibling to the
- * existing tab components (GoalsTab, ProfileTab, etc.).
+ * Props: supabase, user, toast(msg)
  *
- * Required props:
- *   supabase  — Supabase client instance
- *   user      — current auth user object
- *   toast     — function(message) to show a toast notification
- *
- * Database: reads/writes the `food_log` table (see migration).
- * AI parse: calls the `parse-food` Supabase Edge Function.
+ * Storage: food_log, food_day_status
+ * AI parse: parse-food edge function
  */
 import { useState, useEffect, useCallback } from "react";
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+  DragOverlay,
+} from "@dnd-kit/core";
 import { localDateStr } from "./utils/date.js";
 
 /* ── Style constants (matching fitness dashboard) ───────────────── */
@@ -88,6 +92,17 @@ function shortDate(d) {
   });
 }
 
+function addDays(dateStr, delta) {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + delta);
+  return localDateStr(d);
+}
+
+function weekDaysAround(dateStr) {
+  // Returns 7 date strings centred on dateStr (3 before, target, 3 after).
+  return [-3, -2, -1, 0, 1, 2, 3].map((d) => addDays(dateStr, d));
+}
+
 const MEALS = ["breakfast", "lunch", "dinner", "snack"];
 
 function mealEmoji(m) {
@@ -116,9 +131,119 @@ function NutritionBar({ calories, protein_g, carbs_g, fat_g }) {
   );
 }
 
+/* ── DayCell — droppable day in the 7-day strip ──────────────────── */
+function DayCell({ date, selected, isToday, count, onClick }) {
+  const { isOver, setNodeRef } = useDroppable({ id: `day-${date}`, data: { date } });
+  const dow = new Date(date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" }).slice(0, 3).toUpperCase();
+  const dayNum = new Date(date + "T00:00:00").getDate();
+  return (
+    <button
+      ref={setNodeRef}
+      onClick={onClick}
+      style={{
+        flex: "1 0 auto",
+        minWidth: 44,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 2,
+        padding: "8px 4px",
+        background: selected
+          ? ACCENT
+          : isOver
+          ? "rgba(200,255,0,0.18)"
+          : "rgba(255,255,255,0.03)",
+        color: selected ? BG : isToday ? ACCENT : "#fff",
+        border: `1px solid ${isOver ? ACCENT : selected ? ACCENT : BORDER}`,
+        borderRadius: 8,
+        cursor: "pointer",
+        fontFamily: "'Barlow Condensed', sans-serif",
+        transition: "background 0.1s, border-color 0.1s",
+      }}
+    >
+      <span style={{ fontSize: 10, letterSpacing: 1, opacity: selected ? 0.7 : 0.5 }}>{dow}</span>
+      <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1 }}>{dayNum}</span>
+      <span
+        style={{
+          fontSize: 9,
+          height: 10,
+          color: selected ? BG : count > 0 ? ACCENT : "transparent",
+          opacity: selected ? 0.8 : 1,
+        }}
+      >
+        {count > 0 ? `${count} ${count === 1 ? "item" : "items"}` : "·"}
+      </span>
+    </button>
+  );
+}
+
+/* ── DraggableEntry — food row with drag handle ──────────────────── */
+function DraggableEntry({ entry, onDelete }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `entry-${entry.id}`,
+    data: { entry },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        ...card,
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: 12,
+        padding: 14,
+        marginBottom: 8,
+        opacity: isDragging ? 0.3 : 1,
+        cursor: isDragging ? "grabbing" : "grab",
+        touchAction: "none",
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>
+          <span style={{ color: DIM, marginRight: 6, fontSize: 13 }} aria-hidden>⋮⋮</span>
+          {entry.name}
+          <span style={{ color: DIM, fontWeight: 400, fontSize: 14, marginLeft: 8 }}>
+            {entry.quantity} {entry.unit}
+          </span>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            fontSize: 13,
+            color: DIM,
+            fontFamily: "'Barlow Condensed', sans-serif",
+          }}
+        >
+          <span style={{ color: ACCENT }}>{entry.calories} kcal</span>
+          <span>P:{Math.round(Number(entry.protein_g))}g</span>
+          <span>C:{Math.round(Number(entry.carbs_g))}g</span>
+          <span>F:{Math.round(Number(entry.fat_g))}g</span>
+        </div>
+        {entry.notes && (
+          <div style={{ fontSize: 12, color: DIM, marginTop: 4, fontStyle: "italic" }}>
+            {entry.notes}
+          </div>
+        )}
+      </div>
+      <button
+        style={btnDanger}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
+        title="Delete entry"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 /* ── Main component ──────────────────────────────────────────────── */
 export default function FoodTab({ supabase, user, toast }) {
-  const [entries, setEntries] = useState([]);
+  const [weekEntries, setWeekEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(todayStr());
   const [nlInput, setNlInput] = useState("");
@@ -127,12 +252,23 @@ export default function FoodTab({ supabase, user, toast }) {
   const [historyDays, setHistoryDays] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [finalized, setFinalized] = useState(false);
+  const [activeDrag, setActiveDrag] = useState(null);
 
-  /* ── Load entries + finalized status for selected date ────────── */
-  const loadEntries = useCallback(async () => {
+  const weekDates = weekDaysAround(selectedDate);
+  const weekStart = weekDates[0];
+  const weekEnd = weekDates[weekDates.length - 1];
+
+  // Sensors: mouse + touch. Touch uses a short delay so list scrolling still works.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 6 } }),
+  );
+
+  /* ── Load 7-day window + finalized status for selected date ──── */
+  const loadWeek = useCallback(async () => {
     setLoading(true);
     const [entriesRes, statusRes] = await Promise.all([
-      supabase.from("food_log").select("*").eq("date", selectedDate).order("created_at", { ascending: true }),
+      supabase.from("food_log").select("*").gte("date", weekStart).lte("date", weekEnd).order("created_at", { ascending: true }),
       supabase.from("food_day_status").select("date").eq("date", selectedDate).maybeSingle(),
     ]);
 
@@ -140,14 +276,22 @@ export default function FoodTab({ supabase, user, toast }) {
       console.error("food_log load error:", entriesRes.error);
       toast?.("Failed to load food log.");
     }
-    setEntries(entriesRes.data || []);
+    setWeekEntries(entriesRes.data || []);
     setFinalized(!!statusRes.data);
     setLoading(false);
-  }, [supabase, selectedDate, toast]);
+  }, [supabase, weekStart, weekEnd, selectedDate, toast]);
 
   useEffect(() => {
-    loadEntries();
-  }, [loadEntries]);
+    loadWeek();
+  }, [loadWeek]);
+
+  const entries = weekEntries.filter((e) => e.date === selectedDate);
+
+  // Counts per day for the strip badges.
+  const countByDate = weekEntries.reduce((m, e) => {
+    m[e.date] = (m[e.date] || 0) + 1;
+    return m;
+  }, {});
 
   /* ── Toggle finalized for selected date ──────────────────────── */
   async function toggleFinalized() {
@@ -216,7 +360,7 @@ export default function FoodTab({ supabase, user, toast }) {
 
       toast?.(`Logged ${foods.length} food(s) for ${meal}.`);
       setNlInput("");
-      if (date === selectedDate) loadEntries();
+      if (date === selectedDate) loadWeek();
       else setSelectedDate(date);
     } catch (err) {
       console.error("parse-food error:", err);
@@ -271,8 +415,38 @@ export default function FoodTab({ supabase, user, toast }) {
       toast?.("Failed to delete entry.");
       return;
     }
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+    setWeekEntries((prev) => prev.filter((e) => e.id !== id));
     toast?.("Entry removed.");
+  }
+
+  /* ── Drag-to-move ─────────────────────────────────────────────── */
+  function handleDragStart(event) {
+    const entry = event.active?.data?.current?.entry;
+    if (entry) setActiveDrag(entry);
+  }
+
+  async function handleDragEnd(event) {
+    setActiveDrag(null);
+    const { active, over } = event;
+    if (!over) return;
+    const entry = active.data.current?.entry;
+    const newDate = over.data.current?.date;
+    if (!entry || !newDate || entry.date === newDate) return;
+
+    // Optimistic update
+    setWeekEntries((prev) => prev.map((e) => (e.id === entry.id ? { ...e, date: newDate } : e)));
+
+    const { error } = await supabase
+      .from("food_log")
+      .update({ date: newDate })
+      .eq("id", entry.id);
+
+    if (error) {
+      toast?.("Move failed — reverting.");
+      loadWeek();
+      return;
+    }
+    toast?.(`Moved to ${shortDate(newDate)}.`);
   }
 
   /* ── Load history (last 14 days) ──────────────────────────────── */
@@ -294,7 +468,6 @@ export default function FoodTab({ supabase, user, toast }) {
       return;
     }
 
-    // Group by date
     const byDate = {};
     (data || []).forEach((r) => {
       if (!byDate[r.date]) byDate[r.date] = { date: r.date, calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, count: 0 };
@@ -310,225 +483,212 @@ export default function FoodTab({ supabase, user, toast }) {
     setShowHistory(true);
   }
 
-  /* ── Date navigation ──────────────────────────────────────────── */
-  function shiftDate(delta) {
-    const d = new Date(selectedDate + "T00:00:00");
-    d.setDate(d.getDate() + delta);
-    setSelectedDate(localDateStr(d));
-  }
+  const today = todayStr();
 
   /* ── Render ────────────────────────────────────────────────────── */
   return (
-    <div style={{ maxWidth: 600, margin: "0 auto" }}>
-      {/* ── Natural language input ──────────────────────────────── */}
-      <div style={card}>
-        <div style={label}>Log food with AI</div>
-        <textarea
-          style={{ ...input, minHeight: 60, resize: "vertical", marginBottom: 10 }}
-          placeholder='e.g. "2 eggs and toast with peanut butter for breakfast" or "chicken stir fry with rice for dinner"'
-          value={nlInput}
-          onChange={(e) => setNlInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleParse();
-            }
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div style={{ maxWidth: 600, margin: "0 auto" }}>
+        {/* ── Natural language input ──────────────────────────────── */}
+        <div style={card}>
+          <div style={label}>Log food with AI</div>
+          <textarea
+            style={{ ...input, minHeight: 60, resize: "vertical", marginBottom: 10 }}
+            placeholder='e.g. "2 eggs and toast with peanut butter for breakfast" or "chicken stir fry with rice for dinner"'
+            value={nlInput}
+            onChange={(e) => setNlInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleParse();
+              }
+            }}
+          />
+          <button style={{ ...btn, opacity: parsing ? 0.6 : 1 }} onClick={handleParse} disabled={parsing}>
+            {parsing ? "Parsing…" : "Log Food"}
+          </button>
+        </div>
+
+        {/* ── 7-day strip (drop targets) ──────────────────────────── */}
+        <div style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ ...label, marginBottom: 0 }}>
+            Week of {shortDate(weekStart)}
+          </span>
+          <span style={{ fontSize: 11, color: DIM, fontStyle: "italic" }}>
+            Drag an entry to a day to move it
+          </span>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: 4,
+            marginBottom: 16,
+            overflowX: "auto",
+            paddingBottom: 4,
+            WebkitOverflowScrolling: "touch",
           }}
-        />
-        <button style={{ ...btn, opacity: parsing ? 0.6 : 1 }} onClick={handleParse} disabled={parsing}>
-          {parsing ? "Parsing…" : "Log Food"}
-        </button>
-      </div>
-
-      {/* ── Date selector ───────────────────────────────────────── */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 16,
-          marginBottom: 16,
-          fontFamily: "'Barlow Condensed', sans-serif",
-        }}
-      >
-        <button onClick={() => shiftDate(-1)} style={{ ...btn, padding: "6px 14px" }}>
-          ◀
-        </button>
-        <span style={{ fontWeight: 700, fontSize: 18, letterSpacing: 1 }}>
-          {selectedDate === todayStr() ? "Today" : shortDate(selectedDate)}
-        </span>
-        <button
-          onClick={() => shiftDate(1)}
-          style={{ ...btn, padding: "6px 14px", opacity: selectedDate >= todayStr() ? 0.3 : 1 }}
-          disabled={selectedDate >= todayStr()}
         >
-          ▶
-        </button>
-      </div>
-
-      {/* ── Daily totals ────────────────────────────────────────── */}
-      {entries.length > 0 && (
-        <div style={{ ...card, borderLeft: `3px solid ${ACCENT}` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 12, flexWrap: "wrap" }}>
-            <div style={label}>Daily Totals {finalized && <span style={{ color: ACCENT, marginLeft: 8 }}>· Finished ✓</span>}</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button
-                onClick={exportHealthKit}
-                style={{
-                  ...btn,
-                  background: "transparent",
-                  color: ACCENT,
-                  border: `1px solid ${ACCENT}`,
-                  padding: "8px 14px",
-                  fontSize: 12,
-                }}
-                title="Download HealthKit samples JSON for this day"
-              >
-                ↓ Apple Health JSON
-              </button>
-              <button
-                onClick={toggleFinalized}
-                style={{
-                  ...btn,
-                  background: finalized ? "transparent" : ACCENT,
-                  color: finalized ? ACCENT : BG,
-                  border: `1px solid ${ACCENT}`,
-                  padding: "8px 14px",
-                  fontSize: 12,
-                }}
-              >
-                {finalized ? "Reopen Day" : "Finished for the day"}
-              </button>
-            </div>
-          </div>
-          <NutritionBar {...totals} />
-          {totals.fibre_g > 0 && (
-            <div style={{ fontSize: 13, color: DIM, marginTop: 6, fontFamily: "'Barlow Condensed', sans-serif" }}>
-              Fibre: {Math.round(totals.fibre_g)}g
-            </div>
-          )}
+          {weekDates.map((date) => (
+            <DayCell
+              key={date}
+              date={date}
+              selected={date === selectedDate}
+              isToday={date === today}
+              count={countByDate[date] || 0}
+              onClick={() => setSelectedDate(date)}
+            />
+          ))}
         </div>
-      )}
 
-      {/* ── Entries by meal ─────────────────────────────────────── */}
-      {loading ? (
-        <div style={{ textAlign: "center", color: DIM, padding: 40 }}>Loading…</div>
-      ) : entries.length === 0 ? (
-        <div style={{ textAlign: "center", color: DIM, padding: 40 }}>
-          No food logged for {selectedDate === todayStr() ? "today" : shortDate(selectedDate)}.
-          <br />
-          <span style={{ fontSize: 13 }}>Type what you ate above and hit Log Food.</span>
-        </div>
-      ) : (
-        MEALS.map((meal) => {
-          const mealEntries = entries.filter((e) => e.meal === meal);
-          if (mealEntries.length === 0) return null;
-          return (
-            <div key={meal} style={{ marginBottom: 20 }}>
-              <div
-                style={{
-                  fontFamily: "'Barlow Condensed', sans-serif",
-                  fontWeight: 700,
-                  fontSize: 14,
-                  letterSpacing: 2,
-                  textTransform: "uppercase",
-                  color: DIM,
-                  marginBottom: 8,
-                }}
-              >
-                {mealEmoji(meal)} {meal}
+        {/* ── Daily totals ────────────────────────────────────────── */}
+        {entries.length > 0 && (
+          <div style={{ ...card, borderLeft: `3px solid ${ACCENT}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 12, flexWrap: "wrap" }}>
+              <div style={label}>
+                Daily Totals — {shortDate(selectedDate)}
+                {finalized && <span style={{ color: ACCENT, marginLeft: 8 }}>· Finished ✓</span>}
               </div>
-              {mealEntries.map((entry) => (
-                <div
-                  key={entry.id}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  onClick={exportHealthKit}
                   style={{
-                    ...card,
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    padding: 14,
+                    ...btn,
+                    background: "transparent",
+                    color: ACCENT,
+                    border: `1px solid ${ACCENT}`,
+                    padding: "8px 14px",
+                    fontSize: 12,
+                  }}
+                  title="Download HealthKit samples JSON for this day"
+                >
+                  ↓ Apple Health JSON
+                </button>
+                <button
+                  onClick={toggleFinalized}
+                  style={{
+                    ...btn,
+                    background: finalized ? "transparent" : ACCENT,
+                    color: finalized ? ACCENT : BG,
+                    border: `1px solid ${ACCENT}`,
+                    padding: "8px 14px",
+                    fontSize: 12,
+                  }}
+                >
+                  {finalized ? "Reopen Day" : "Finished for the day"}
+                </button>
+              </div>
+            </div>
+            <NutritionBar {...totals} />
+            {totals.fibre_g > 0 && (
+              <div style={{ fontSize: 13, color: DIM, marginTop: 6, fontFamily: "'Barlow Condensed', sans-serif" }}>
+                Fibre: {Math.round(totals.fibre_g)}g
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Entries by meal ─────────────────────────────────────── */}
+        {loading ? (
+          <div style={{ textAlign: "center", color: DIM, padding: 40 }}>Loading…</div>
+        ) : entries.length === 0 ? (
+          <div style={{ textAlign: "center", color: DIM, padding: 40 }}>
+            No food logged for {selectedDate === today ? "today" : shortDate(selectedDate)}.
+            <br />
+            <span style={{ fontSize: 13 }}>Type what you ate above and hit Log Food.</span>
+          </div>
+        ) : (
+          MEALS.map((meal) => {
+            const mealEntries = entries.filter((e) => e.meal === meal);
+            if (mealEntries.length === 0) return null;
+            return (
+              <div key={meal} style={{ marginBottom: 20 }}>
+                <div
+                  style={{
+                    fontFamily: "'Barlow Condensed', sans-serif",
+                    fontWeight: 700,
+                    fontSize: 14,
+                    letterSpacing: 2,
+                    textTransform: "uppercase",
+                    color: DIM,
                     marginBottom: 8,
                   }}
                 >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>
-                      {entry.name}
-                      <span style={{ color: DIM, fontWeight: 400, fontSize: 14, marginLeft: 8 }}>
-                        {entry.quantity} {entry.unit}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 12,
-                        fontSize: 13,
-                        color: DIM,
-                        fontFamily: "'Barlow Condensed', sans-serif",
-                      }}
-                    >
-                      <span style={{ color: ACCENT }}>{entry.calories} kcal</span>
-                      <span>P:{Math.round(Number(entry.protein_g))}g</span>
-                      <span>C:{Math.round(Number(entry.carbs_g))}g</span>
-                      <span>F:{Math.round(Number(entry.fat_g))}g</span>
-                    </div>
-                    {entry.notes && (
-                      <div style={{ fontSize: 12, color: DIM, marginTop: 4, fontStyle: "italic" }}>
-                        {entry.notes}
-                      </div>
-                    )}
-                  </div>
-                  <button style={btnDanger} onClick={() => handleDelete(entry.id)} title="Delete entry">
-                    ✕
-                  </button>
+                  {mealEmoji(meal)} {meal}
                 </div>
-              ))}
-            </div>
-          );
-        })
-      )}
+                {mealEntries.map((entry) => (
+                  <DraggableEntry key={entry.id} entry={entry} onDelete={handleDelete} />
+                ))}
+              </div>
+            );
+          })
+        )}
 
-      {/* ── History toggle ──────────────────────────────────────── */}
-      <div style={{ textAlign: "center", marginTop: 8, marginBottom: 24 }}>
-        <button
-          style={{ ...btn, background: "transparent", color: ACCENT, border: `1px solid ${ACCENT}` }}
-          onClick={() => (showHistory ? setShowHistory(false) : loadHistory())}
-        >
-          {showHistory ? "Hide History" : historyLoading ? "Loading…" : "Show 14-Day History"}
-        </button>
+        {/* ── History toggle ──────────────────────────────────────── */}
+        <div style={{ textAlign: "center", marginTop: 8, marginBottom: 24 }}>
+          <button
+            style={{ ...btn, background: "transparent", color: ACCENT, border: `1px solid ${ACCENT}` }}
+            onClick={() => (showHistory ? setShowHistory(false) : loadHistory())}
+          >
+            {showHistory ? "Hide History" : historyLoading ? "Loading…" : "Show 14-Day History"}
+          </button>
+        </div>
+
+        {/* ── History view ────────────────────────────────────────── */}
+        {showHistory && historyDays.length > 0 && (
+          <div style={card}>
+            <div style={{ ...label, marginBottom: 12 }}>14-Day Overview</div>
+            {historyDays.map((day) => (
+              <div
+                key={day.date}
+                onClick={() => {
+                  setSelectedDate(day.date);
+                  setShowHistory(false);
+                }}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "10px 0",
+                  borderBottom: `1px solid ${BORDER}`,
+                  cursor: "pointer",
+                }}
+              >
+                <div>
+                  <span style={{ fontWeight: 600 }}>{shortDate(day.date)}</span>
+                  <span style={{ color: DIM, fontSize: 13, marginLeft: 8 }}>{day.count} items</span>
+                </div>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, color: ACCENT }}>
+                  {Math.round(day.calories)} kcal
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* ── History view ────────────────────────────────────────── */}
-      {showHistory && historyDays.length > 0 && (
-        <div style={card}>
-          <div style={{ ...label, marginBottom: 12 }}>14-Day Overview</div>
-          {historyDays.map((day) => (
-            <div
-              key={day.date}
-              onClick={() => {
-                setSelectedDate(day.date);
-                setShowHistory(false);
-              }}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "10px 0",
-                borderBottom: `1px solid ${BORDER}`,
-                cursor: "pointer",
-              }}
-            >
-              <div>
-                <span style={{ fontWeight: 600 }}>{shortDate(day.date)}</span>
-                <span style={{ color: DIM, fontSize: 13, marginLeft: 8 }}>{day.count} items</span>
-              </div>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, color: ACCENT }}>
-                {Math.round(day.calories)} kcal
-              </div>
+      {/* Floating drag preview */}
+      <DragOverlay>
+        {activeDrag ? (
+          <div
+            style={{
+              ...card,
+              padding: 14,
+              margin: 0,
+              borderColor: ACCENT,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+              maxWidth: 320,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>
+              {activeDrag.name}
+              <span style={{ color: DIM, fontWeight: 400, fontSize: 14, marginLeft: 8 }}>
+                {activeDrag.quantity} {activeDrag.unit}
+              </span>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+            <div style={{ fontSize: 12, color: ACCENT }}>{activeDrag.calories} kcal</div>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }
