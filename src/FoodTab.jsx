@@ -104,10 +104,47 @@ function weekDaysAround(dateStr) {
   return [-3, -2, -1, 0, 1, 2, 3].map((d) => addDays(dateStr, d));
 }
 
-const MEALS = ["breakfast", "lunch", "dinner", "snack"];
+const MEAL_COLS = ["breakfast", "lunch", "dinner"];
 
 function mealEmoji(m) {
   return { breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎" }[m] || "🍽️";
+}
+
+/* ── MealColumn — header + entries for a single meal ─────────────── */
+function MealColumn({ meal, entries, onDelete }) {
+  return (
+    <div>
+      <div
+        style={{
+          fontFamily: "'Barlow Condensed', sans-serif",
+          fontWeight: 700,
+          fontSize: 14,
+          letterSpacing: 2,
+          textTransform: "uppercase",
+          color: DIM,
+          marginBottom: 8,
+        }}
+      >
+        {mealEmoji(meal)} {meal}
+      </div>
+      {entries.length === 0 ? (
+        <div
+          style={{
+            fontSize: 12,
+            color: "rgba(255,255,255,0.25)",
+            fontStyle: "italic",
+            padding: "10px 0",
+            borderTop: `1px dashed ${BORDER}`,
+            marginBottom: 8,
+          }}
+        >
+          Nothing logged.
+        </div>
+      ) : (
+        entries.map((entry) => <DraggableEntry key={entry.id} entry={entry} onDelete={onDelete} />)
+      )}
+    </div>
+  );
 }
 
 /* ── NutritionBar — compact macro bar ────────────────────────────── */
@@ -600,30 +637,30 @@ export default function FoodTab({ supabase, user, toast }) {
             <span style={{ fontSize: 13 }}>Type what you ate above and hit Log Food.</span>
           </div>
         ) : (
-          MEALS.map((meal) => {
-            const mealEntries = entries.filter((e) => e.meal === meal);
-            if (mealEntries.length === 0) return null;
-            return (
-              <div key={meal} style={{ marginBottom: 20 }}>
-                <div
-                  style={{
-                    fontFamily: "'Barlow Condensed', sans-serif",
-                    fontWeight: 700,
-                    fontSize: 14,
-                    letterSpacing: 2,
-                    textTransform: "uppercase",
-                    color: DIM,
-                    marginBottom: 8,
-                  }}
-                >
-                  {mealEmoji(meal)} {meal}
-                </div>
-                {mealEntries.map((entry) => (
-                  <DraggableEntry key={entry.id} entry={entry} onDelete={handleDelete} />
-                ))}
+          <>
+            {/* Breakfast · Lunch · Dinner — 3 columns on ≥640px, stacks below */}
+            <div className="meal-grid">
+              {MEAL_COLS.map((meal) => (
+                <MealColumn
+                  key={meal}
+                  meal={meal}
+                  entries={entries.filter((e) => e.meal === meal)}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+
+            {/* Snacks — full-width row below */}
+            {entries.some((e) => e.meal === "snack") && (
+              <div style={{ marginBottom: 20 }}>
+                <MealColumn
+                  meal="snack"
+                  entries={entries.filter((e) => e.meal === "snack")}
+                  onDelete={handleDelete}
+                />
               </div>
-            );
-          })
+            )}
+          </>
         )}
 
         {/* ── History toggle ──────────────────────────────────────── */}
