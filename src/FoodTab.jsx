@@ -105,9 +105,92 @@ function weekDaysAround(dateStr) {
 }
 
 const MEAL_COLS = ["breakfast", "lunch", "dinner"];
+const MEAL_ORDER = ["breakfast", "lunch", "dinner", "snack"];
 
 function mealEmoji(m) {
   return { breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎" }[m] || "🍽️";
+}
+
+function sumRows(rows) {
+  return rows.reduce(
+    (a, r) => ({
+      calories: a.calories + Number(r.calories || 0),
+      protein_g: a.protein_g + Number(r.protein_g || 0),
+      carbs_g: a.carbs_g + Number(r.carbs_g || 0),
+      fat_g: a.fat_g + Number(r.fat_g || 0),
+      fibre_g: a.fibre_g + Number(r.fibre_g || 0),
+    }),
+    { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fibre_g: 0 },
+  );
+}
+
+function fmtTotals(t) {
+  const parts = [
+    `${Math.round(t.calories)} kcal`,
+    `P ${Math.round(t.protein_g)}g`,
+    `C ${Math.round(t.carbs_g)}g`,
+    `F ${Math.round(t.fat_g)}g`,
+  ];
+  if (t.fibre_g > 0) parts.push(`Fibre ${Math.round(t.fibre_g)}g`);
+  return parts.join(" · ");
+}
+
+function buildFoodText(rows, start, end, days) {
+  const byDate = {};
+  for (const r of rows) (byDate[r.date] ??= []).push(r);
+
+  const headerRange =
+    days === 1
+      ? new Date(start + "T00:00:00").toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })
+      : `${start} to ${end} (${days} days)`;
+
+  const grand = sumRows(rows);
+  const summary =
+    days === 1
+      ? `Totals: ${fmtTotals(grand)}`
+      : `Grand total: ${fmtTotals(grand)}\nDaily avg:   ${Math.round(grand.calories / days)} kcal · P ${Math.round(grand.protein_g / days)}g · C ${Math.round(grand.carbs_g / days)}g · F ${Math.round(grand.fat_g / days)}g`;
+
+  const dateSections = Object.keys(byDate)
+    .sort()
+    .map((date) => {
+      const dayRows = byDate[date];
+      const dayTotals = sumRows(dayRows);
+      const dateLabel = new Date(date + "T00:00:00").toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      });
+      const mealSections = MEAL_ORDER.filter((m) => dayRows.some((r) => (r.meal || "snack") === m))
+        .map((m) => {
+          const mealRows = dayRows.filter((r) => (r.meal || "snack") === m);
+          const lines = mealRows
+            .map((e) => {
+              const head = `  • ${e.name} — ${e.quantity} ${e.unit}`;
+              const macros = `    ${e.calories} kcal · P ${Math.round(Number(e.protein_g))}g · C ${Math.round(Number(e.carbs_g))}g · F ${Math.round(Number(e.fat_g))}g${e.fibre_g > 0 ? ` · Fi ${Math.round(Number(e.fibre_g))}g` : ""}`;
+              const note = e.notes ? `\n    (${e.notes})` : "";
+              return `${head}\n${macros}${note}`;
+            })
+            .join("\n");
+          return `${mealEmoji(m)} ${m.toUpperCase()}\n${lines}`;
+        })
+        .join("\n\n");
+
+      const header = `─────────────────────────────────────────\n${dateLabel}\n${fmtTotals(dayTotals)}\n─────────────────────────────────────────`;
+      return `${header}\n\n${mealSections || "  (no entries)"}`;
+    })
+    .join("\n\n\n");
+
+  return `Food Log — ${headerRange}
+${summary}
+
+
+${dateSections}
+`;
 }
 
 /* ── MealColumn — header + entries for a single meal ─────────────── */
@@ -409,43 +492,40 @@ export default function FoodTab({ supabase, user, toast }) {
     setParsing(false);
   }
 
-  /* ── Export selected day as HealthKit sample JSON ─────────────── */
-  function exportHealthKit() {
-    if (entries.length === 0) {
-      toast?.("Nothing to export for this day.");
+  /* ── Export text for a day / week / month ending on selectedDate ─ */
+  async function exportText(days) {
+    const end = selectedDate;
+    const start = addDays(end, -(days - 1));
+
+    const { data, error } = await supabase
+      .from("food_log")
+      .select("*")
+      .gte("date", start)
+      .lte("date", end)
+      .order("date", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      toast?.("Export failed — " + error.message);
       return;
     }
-    const samples = [];
-    for (const e of entries) {
-      const ts = e.created_at || `${e.date}T12:00:00`;
-      const note = e.name;
-      const pairs = [
-        ["dietaryEnergyConsumed", Number(e.calories), "kcal"],
-        ["dietaryProtein", Number(e.protein_g), "g"],
-        ["dietaryCarbohydrates", Number(e.carbs_g), "g"],
-        ["dietaryFatTotal", Number(e.fat_g), "g"],
-        ["dietaryFiber", Number(e.fibre_g || 0), "g"],
-      ];
-      for (const [type, value, unit] of pairs) {
-        if (value > 0) samples.push({ type, value: +value.toFixed(2), unit, date: ts, note });
-      }
+    const rows = data || [];
+    if (rows.length === 0) {
+      toast?.(`No entries to export for the last ${days} day${days === 1 ? "" : "s"}.`);
+      return;
     }
-    const payload = {
-      date: selectedDate,
-      generated: new Date().toISOString(),
-      sample_count: samples.length,
-      samples,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+
+    const text = buildFoodText(rows, start, end, days);
+    const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `healthkit_samples_${selectedDate}.json`;
+    a.download = days === 1 ? `food_log_${end}.txt` : `food_log_${start}_to_${end}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast?.(`Exported ${samples.length} HealthKit samples.`);
+    toast?.(`Exported ${rows.length} entries.`);
   }
 
   /* ── Delete entry ─────────────────────────────────────────────── */
@@ -588,21 +668,29 @@ export default function FoodTab({ supabase, user, toast }) {
                 Daily Totals — {shortDate(selectedDate)}
                 {finalized && <span style={{ color: ACCENT, marginLeft: 8 }}>· Finished ✓</span>}
               </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  onClick={exportHealthKit}
-                  style={{
-                    ...btn,
-                    background: "transparent",
-                    color: ACCENT,
-                    border: `1px solid ${ACCENT}`,
-                    padding: "8px 14px",
-                    fontSize: 12,
-                  }}
-                  title="Download HealthKit samples JSON for this day"
-                >
-                  ↓ Apple Health JSON
-                </button>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: 11, color: DIM, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2, textTransform: "uppercase" }}>Export:</span>
+                {[
+                  ["Day", 1],
+                  ["Week", 7],
+                  ["Month", 30],
+                ].map(([lbl, n]) => (
+                  <button
+                    key={lbl}
+                    onClick={() => exportText(n)}
+                    style={{
+                      ...btn,
+                      background: "transparent",
+                      color: ACCENT,
+                      border: `1px solid ${ACCENT}`,
+                      padding: "6px 12px",
+                      fontSize: 12,
+                    }}
+                    title={`Download last ${n} day${n === 1 ? "" : "s"} as text`}
+                  >
+                    {lbl}
+                  </button>
+                ))}
                 <button
                   onClick={toggleFinalized}
                   style={{
@@ -612,6 +700,7 @@ export default function FoodTab({ supabase, user, toast }) {
                     border: `1px solid ${ACCENT}`,
                     padding: "8px 14px",
                     fontSize: 12,
+                    marginLeft: 8,
                   }}
                 >
                   {finalized ? "Reopen Day" : "Finished for the day"}
