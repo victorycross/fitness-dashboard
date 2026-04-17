@@ -16,6 +16,7 @@ import {
   useDraggable,
   useDroppable,
   DragOverlay,
+  closestCenter,
 } from "@dnd-kit/core";
 import { localDateStr } from "./utils/date.js";
 
@@ -142,12 +143,14 @@ function DayCell({ date, selected, isToday, count, onClick }) {
       onClick={onClick}
       style={{
         flex: "1 0 auto",
-        minWidth: 44,
+        minWidth: 48,
+        minHeight: 72,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 2,
-        padding: "8px 4px",
+        justifyContent: "center",
+        gap: 3,
+        padding: "10px 4px",
         background: selected
           ? ACCENT
           : isOver
@@ -487,7 +490,7 @@ export default function FoodTab({ supabase, user, toast }) {
 
   /* ── Render ────────────────────────────────────────────────────── */
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         {/* ── Natural language input ──────────────────────────────── */}
         <div style={card}>
@@ -666,26 +669,28 @@ export default function FoodTab({ supabase, user, toast }) {
         )}
       </div>
 
-      {/* Floating drag preview */}
-      <DragOverlay>
+      {/* Floating drag preview — compact pill so it doesn't cover multiple day cells */}
+      <DragOverlay dropAnimation={null}>
         {activeDrag ? (
           <div
             style={{
-              ...card,
-              padding: 14,
-              margin: 0,
-              borderColor: ACCENT,
-              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-              maxWidth: 320,
+              background: ACCENT,
+              color: BG,
+              padding: "6px 12px",
+              borderRadius: 999,
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: "'Barlow Condensed', sans-serif",
+              letterSpacing: 0.5,
+              whiteSpace: "nowrap",
+              boxShadow: "0 6px 16px rgba(0,0,0,0.5)",
+              pointerEvents: "none",
+              maxWidth: 180,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>
-              {activeDrag.name}
-              <span style={{ color: DIM, fontWeight: 400, fontSize: 14, marginLeft: 8 }}>
-                {activeDrag.quantity} {activeDrag.unit}
-              </span>
-            </div>
-            <div style={{ fontSize: 12, color: ACCENT }}>{activeDrag.calories} kcal</div>
+            {activeDrag.name} · {activeDrag.calories} kcal
           </div>
         ) : null}
       </DragOverlay>
