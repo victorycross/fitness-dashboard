@@ -104,7 +104,6 @@ function weekDaysAround(dateStr) {
   return [-3, -2, -1, 0, 1, 2, 3].map((d) => addDays(dateStr, d));
 }
 
-const MEAL_COLS = ["breakfast", "lunch", "dinner"];
 const MEAL_ORDER = ["breakfast", "lunch", "dinner", "snack"];
 
 function mealEmoji(m) {
@@ -727,28 +726,15 @@ export default function FoodTab({ supabase, user, toast }) {
           </div>
         ) : (
           <>
-            {/* Breakfast · Lunch · Dinner — 3 columns on ≥640px, stacks below */}
-            <div className="meal-grid">
-              {MEAL_COLS.map((meal) => (
-                <MealColumn
-                  key={meal}
-                  meal={meal}
-                  entries={entries.filter((e) => e.meal === meal)}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-
-            {/* Snacks — full-width row below */}
-            {entries.some((e) => e.meal === "snack") && (
-              <div style={{ marginBottom: 20 }}>
-                <MealColumn
-                  meal="snack"
-                  entries={entries.filter((e) => e.meal === "snack")}
-                  onDelete={handleDelete}
-                />
-              </div>
-            )}
+            {MEAL_ORDER.map((meal) => {
+              const mealEntries = entries.filter((e) => (e.meal || "snack") === meal);
+              if (mealEntries.length === 0) return null;
+              return (
+                <div key={meal} style={{ marginBottom: 20 }}>
+                  <MealColumn meal={meal} entries={mealEntries} onDelete={handleDelete} />
+                </div>
+              );
+            })}
           </>
         )}
 
