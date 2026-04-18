@@ -41,3 +41,15 @@ export function ftInHint(cm) {
   const ftIn = cmToFtIn(cm);
   return ftIn ? `≈ ${ftIn.ft}'${ftIn.in}"` : "";
 }
+
+export function lbsToKg(lbs) {
+  const n = Number(lbs);
+  if (!isFinite(n)) return null;
+  return n / 2.20462;
+}
+
+export function ftInToCm(ft, inches) {
+  const f = Number(ft) || 0;
+  const i = Number(inches) || 0;
+  return (f * 12 + i) * 2.54;
+}

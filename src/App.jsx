@@ -4,7 +4,8 @@ import { supabase } from "./supabase.js";
 import FoodTab from "./FoodTab.jsx";
 import DashboardTab from "./DashboardTab.jsx";
 import { localDateStr } from "./utils/date.js";
-import { formatWeight, lbsHint, ftInHint } from "./utils/units.js";
+import { formatWeight } from "./utils/units.js";
+import { HeightInput, WeightInput } from "./components/MeasureInputs.jsx";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const EMPTY_EXERCISE = { name: "", sets: "", reps: "", weight: "" };
@@ -125,7 +126,7 @@ function ConfirmEmailScreen({ email, onSignOut }) {
 }
 
 // ─── Onboarding Wizard ────────────────────────────────────────────────────────
-function OnboardingWizard({ user, onComplete }) {
+function OnboardingWizard({ user, onComplete, units }) {
   const TOTAL = 5;
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -258,14 +259,12 @@ function OnboardingWizard({ user, onComplete }) {
               <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 24 }}>Used to calculate BMI and track progress. All fields optional.</div>
               <div className="stack-mobile" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 <div>
-                  <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Height (cm)</label>
-                  <input type="number" style={inp} placeholder="e.g. 175" value={data.height_cm} onChange={e => set("height_cm", e.target.value)} />
-                  {data.height_cm && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>{ftInHint(data.height_cm)}</div>}
+                  <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Height {units === "imperial" ? "(ft / in)" : "(cm)"}</label>
+                  <HeightInput valueCm={data.height_cm} onChangeCm={(v) => set("height_cm", v)} units={units} style={inp} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Current weight (kg)</label>
-                  <input type="number" step="0.1" style={inp} placeholder="e.g. 85.0" value={data.initial_weight} onChange={e => set("initial_weight", e.target.value)} />
-                  {data.initial_weight && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>{lbsHint(data.initial_weight)}</div>}
+                  <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Current weight {units === "imperial" ? "(lb)" : "(kg)"}</label>
+                  <WeightInput valueKg={data.initial_weight} onChangeKg={(v) => set("initial_weight", v)} units={units} style={inp} />
                 </div>
                 <div>
                   <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Body fat %</label>
@@ -1127,7 +1126,7 @@ function _AuthScreen({ onAuth }) {
 }
 
 // ─── Profile Tab ──────────────────────────────────────────────────────────────
-function ProfileTab({ user, profile, onSave, onSignOut }) {
+function ProfileTab({ user, profile, onSave, onSignOut, units, setUnits }) {
   const [form, setForm] = useState({
     name: profile?.name || "",
     height_cm: profile?.height_cm || "",
@@ -1263,9 +1262,8 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
         </div>
         {/* Height */}
         <div>
-          <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Height (cm)</label>
-          <input type="number" style={inp} value={form.height_cm} onChange={e => setForm(f => ({ ...f, height_cm: e.target.value }))} placeholder="170" />
-          {form.height_cm && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>{ftInHint(form.height_cm)}</div>}
+          <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Height {units === "imperial" ? "(ft / in)" : "(cm)"}</label>
+          <HeightInput valueCm={form.height_cm} onChangeCm={(v) => setForm(f => ({ ...f, height_cm: v }))} units={units} style={inp} />
         </div>
         {/* Target BMI */}
         <div>
@@ -1356,6 +1354,24 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
               ? <>Sends a daily email when you haven't logged a workout in 3 days or weight in 7 days. Every email includes a one-click unsubscribe link — or toggle this off and save to stop immediately.</>
               : <>Reminders are off. Toggle on to receive daily nudge emails when your workout or weight log falls behind.</>
             }
+          </div>
+        </div>
+        {/* Measurement units */}
+        <div style={{ gridColumn: "1/-1", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginTop: 4 }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>Measurement Units</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              onClick={() => setUnits(units === "metric" ? "imperial" : "metric")}
+              style={{ width: 44, height: 24, borderRadius: 12, background: units === "imperial" ? "#C8FF00" : "rgba(255,255,255,0.1)", cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}
+            >
+              <div style={{ position: "absolute", top: 3, left: units === "imperial" ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: units === "imperial" ? "#0e0e0e" : "rgba(255,255,255,0.4)", transition: "left 0.2s" }} />
+            </div>
+            <span style={{ fontSize: 13, color: "#fff" }}>
+              {units === "imperial" ? "Imperial (lb, ft/in)" : "Metric (kg, cm)"}
+            </span>
+          </div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 8, lineHeight: 1.7 }}>
+            Controls the unit you enter values in. Weight and height are always stored and displayed with both units alongside.
           </div>
         </div>
         {/* Food exports */}
@@ -1848,6 +1864,8 @@ export default function App() {
   const [error, setError]             = useState("");
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [units, setUnitsState] = useState(() => localStorage.getItem("units") || "metric");
+  const setUnits = (u) => { setUnitsState(u); localStorage.setItem("units", u); };
 
   // Auth listener
   useEffect(() => {
@@ -2038,7 +2056,7 @@ export default function App() {
   if (!user.email_confirmed_at) return <ConfirmEmailScreen email={user.email} onSignOut={signOut} />;
   if (!profileLoaded) return loadingScreen;
   if (!profile?.onboarding_complete) return (
-    <OnboardingWizard user={user} onComplete={p => { setProfile(p); loadData(); }} />
+    <OnboardingWizard user={user} onComplete={p => { setProfile(p); loadData(); }} units={units} />
   );
   if (loading) return loadingScreen;
 
@@ -2289,9 +2307,8 @@ export default function App() {
                 <input type="date" style={inp} value={newWeightDate} onChange={e => setNewWeightDate(e.target.value)} />
               </div>
               <div style={{ flex: 1, minWidth: 120 }}>
-                <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Weight (kg)</label>
-                <input type="number" step="0.1" placeholder="e.g. 105.5" style={inp} value={newWeight} onChange={e => setNewWeight(e.target.value)} onKeyDown={e => e.key === "Enter" && logWeight()} />
-                {newWeight && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>{lbsHint(newWeight)}</div>}
+                <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Weight {units === "imperial" ? "(lb)" : "(kg)"}</label>
+                <WeightInput valueKg={newWeight} onChangeKg={setNewWeight} units={units} style={inp} placeholder={units === "imperial" ? "e.g. 230" : "e.g. 105.5"} onKeyDown={e => e.key === "Enter" && logWeight()} />
               </div>
               <div style={{ flex: 1, minWidth: 100 }}>
                 <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Body Fat %</label>
@@ -2341,7 +2358,7 @@ export default function App() {
 
         {/* PROFILE TAB */}
         {tab === "profile" && (
-          <ProfileTab user={user} profile={profile} onSave={p => setProfile(p)} onSignOut={signOut} />
+          <ProfileTab user={user} profile={profile} onSave={p => setProfile(p)} onSignOut={signOut} units={units} setUnits={setUnits} />
         )}
 
         {/* ADMIN TAB */}
