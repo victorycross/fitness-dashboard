@@ -192,10 +192,22 @@ ${dateSections}
 `;
 }
 
-/* ── MealColumn — header + entries for a single meal ─────────────── */
+/* ── MealColumn — droppable header + entries for a single meal ──── */
 function MealColumn({ meal, entries, onDelete }) {
+  const { isOver, setNodeRef } = useDroppable({ id: `meal-${meal}`, data: { meal } });
   return (
-    <div>
+    <div
+      ref={setNodeRef}
+      style={{
+        padding: 8,
+        marginLeft: -8,
+        marginRight: -8,
+        borderRadius: 8,
+        background: isOver ? "rgba(200,255,0,0.08)" : "transparent",
+        border: isOver ? `1px dashed ${ACCENT}` : "1px dashed transparent",
+        transition: "background 0.1s, border-color 0.1s",
+      }}
+    >
       <div
         style={{
           fontFamily: "'Barlow Condensed', sans-serif",
@@ -203,7 +215,7 @@ function MealColumn({ meal, entries, onDelete }) {
           fontSize: 14,
           letterSpacing: 2,
           textTransform: "uppercase",
-          color: DIM,
+          color: isOver ? ACCENT : DIM,
           marginBottom: 8,
         }}
       >
@@ -448,7 +460,7 @@ export default function FoodTab({ supabase, user, toast }) {
     setParsing(true);
     try {
       const { data, error } = await supabase.functions.invoke("parse-food", {
-        body: { description: nlInput.trim(), today: todayStr() },
+        body: { description: nlInput.trim(), today: selectedDate },
       });
       if (error) throw error;
 
@@ -549,23 +561,28 @@ export default function FoodTab({ supabase, user, toast }) {
     const { active, over } = event;
     if (!over) return;
     const entry = active.data.current?.entry;
+    if (!entry) return;
+
     const newDate = over.data.current?.date;
-    if (!entry || !newDate || entry.date === newDate) return;
+    const newMeal = over.data.current?.meal;
+
+    const patch = {};
+    if (newDate && newDate !== entry.date) patch.date = newDate;
+    if (newMeal && newMeal !== entry.meal) patch.meal = newMeal;
+    if (Object.keys(patch).length === 0) return;
 
     // Optimistic update
-    setWeekEntries((prev) => prev.map((e) => (e.id === entry.id ? { ...e, date: newDate } : e)));
+    setWeekEntries((prev) => prev.map((e) => (e.id === entry.id ? { ...e, ...patch } : e)));
 
-    const { error } = await supabase
-      .from("food_log")
-      .update({ date: newDate })
-      .eq("id", entry.id);
+    const { error } = await supabase.from("food_log").update(patch).eq("id", entry.id);
 
     if (error) {
       toast?.("Move failed — reverting.");
       loadWeek();
       return;
     }
-    toast?.(`Moved to ${shortDate(newDate)}.`);
+    if (patch.date) toast?.(`Moved to ${shortDate(patch.date)}.`);
+    else if (patch.meal) toast?.(`Moved to ${patch.meal}.`);
   }
 
   /* ── Load history (last 14 days) ──────────────────────────────── */
@@ -726,15 +743,15 @@ export default function FoodTab({ supabase, user, toast }) {
           </div>
         ) : (
           <>
-            {MEAL_ORDER.map((meal) => {
-              const mealEntries = entries.filter((e) => (e.meal || "snack") === meal);
-              if (mealEntries.length === 0) return null;
-              return (
-                <div key={meal} style={{ marginBottom: 20 }}>
-                  <MealColumn meal={meal} entries={mealEntries} onDelete={handleDelete} />
-                </div>
-              );
-            })}
+            {MEAL_ORDER.map((meal) => (
+              <div key={meal} style={{ marginBottom: 20 }}>
+                <MealColumn
+                  meal={meal}
+                  entries={entries.filter((e) => (e.meal || "snack") === meal)}
+                  onDelete={handleDelete}
+                />
+              </div>
+            ))}
           </>
         )}
 
