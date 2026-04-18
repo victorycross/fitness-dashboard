@@ -5,6 +5,7 @@
 import { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { localDateStr } from "./utils/date.js";
+import { kgToLbs, formatWeight } from "./utils/units.js";
 
 const ACCENT = "#C8FF00";
 const DIM = "rgba(255,255,255,0.4)";
@@ -211,14 +212,17 @@ export default function DashboardTab({ supabase, user, profile, sessions, weight
           <Label>Current Weight</Label>
           <BigValue>{latestW?.kg ? latestW.kg.toFixed(1) : "—"}<span style={{ fontSize: 18, color: DIM, marginLeft: 4 }}>kg</span></BigValue>
           <Sub>
+            {latestW ? <span>{kgToLbs(latestW.kg).toFixed(0)} lb</span> : null}
             {targetKg && latestW ? (
-              latestW.kg > targetKg
-                ? `${(latestW.kg - targetKg).toFixed(1)} kg to target (${targetKg})`
-                : `at or below target (${targetKg} kg)`
-            ) : "no target set"}
+              <span style={{ marginLeft: 8 }}>
+                {latestW.kg > targetKg
+                  ? `· ${formatWeight(latestW.kg - targetKg)} to target`
+                  : `· at or below target (${formatWeight(targetKg)})`}
+              </span>
+            ) : !latestW ? "no weight logged" : null}
             {weightWeekChange !== null && (
               <span style={{ marginLeft: 8, color: weightWeekChange < 0 ? ACCENT : "#facc15" }}>
-                {weightWeekChange > 0 ? "+" : ""}{weightWeekChange} kg / 7d
+                · {weightWeekChange > 0 ? "+" : ""}{formatWeight(weightWeekChange)} / 7d
               </span>
             )}
           </Sub>

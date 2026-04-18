@@ -4,6 +4,7 @@ import { supabase } from "./supabase.js";
 import FoodTab from "./FoodTab.jsx";
 import DashboardTab from "./DashboardTab.jsx";
 import { localDateStr } from "./utils/date.js";
+import { formatWeight, lbsHint, ftInHint } from "./utils/units.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const EMPTY_EXERCISE = { name: "", sets: "", reps: "", weight: "" };
@@ -259,10 +260,12 @@ function OnboardingWizard({ user, onComplete }) {
                 <div>
                   <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Height (cm)</label>
                   <input type="number" style={inp} placeholder="e.g. 175" value={data.height_cm} onChange={e => set("height_cm", e.target.value)} />
+                  {data.height_cm && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>{ftInHint(data.height_cm)}</div>}
                 </div>
                 <div>
                   <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Current weight (kg)</label>
                   <input type="number" step="0.1" style={inp} placeholder="e.g. 85.0" value={data.initial_weight} onChange={e => set("initial_weight", e.target.value)} />
+                  {data.initial_weight && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>{lbsHint(data.initial_weight)}</div>}
                 </div>
                 <div>
                   <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Body fat %</label>
@@ -273,7 +276,7 @@ function OnboardingWizard({ user, onComplete }) {
                   <input type="number" step="0.1" style={inp} placeholder="24.9" value={data.target_bmi} onChange={e => set("target_bmi", e.target.value)} />
                   {data.height_cm && data.target_bmi && (
                     <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>
-                      = {(parseFloat(data.target_bmi) * (parseFloat(data.height_cm) / 100) ** 2).toFixed(1)} kg target
+                      = {formatWeight(parseFloat(data.target_bmi) * (parseFloat(data.height_cm) / 100) ** 2)} target
                     </div>
                   )}
                 </div>
@@ -472,15 +475,15 @@ function GoalsTab({ user, profile, weights, sessions, photos, onProfileUpdate, o
             {targetKg && latestKg && (
               <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>
                 {latestKg > targetKg
-                  ? <><span style={{ color: "#facc15", fontWeight: "bold" }}>{(latestKg - targetKg).toFixed(1)} kg</span> to target of {targetKg} kg</>
+                  ? <><span style={{ color: "#facc15", fontWeight: "bold" }}>{formatWeight(latestKg - targetKg)}</span> to target of {formatWeight(targetKg)}</>
                   : latestKg < targetKg
-                    ? <><span style={{ color: "#C8FF00", fontWeight: "bold" }}>Target reached</span> — {(targetKg - latestKg).toFixed(1)} kg under goal</>
+                    ? <><span style={{ color: "#C8FF00", fontWeight: "bold" }}>Target reached</span> — {formatWeight(targetKg - latestKg)} under goal</>
                     : <span style={{ color: "#C8FF00", fontWeight: "bold" }}>Exactly at target!</span>
                 }
               </div>
             )}
           </div>
-          {targetKg && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1 }}>— — target {targetKg} kg</div>}
+          {targetKg && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1 }}>— — target {formatWeight(targetKg)}</div>}
         </div>
         {sortedW.length > 0 ? (
           <ResponsiveContainer width="100%" height={200}>
@@ -742,7 +745,7 @@ const CustomTooltip = ({ active, payload }) => {
   const kg = payload[0].value;
   return (
     <div style={{ background: "#1a1a1a", border: "1px solid rgba(200,255,0,0.3)", borderRadius: 2, padding: "10px 14px" }}>
-      <div style={{ color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700 }}>{kg} kg</div>
+      <div style={{ color: "#fff", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700 }}>{formatWeight(kg)}</div>
     </div>
   );
 };
@@ -1262,12 +1265,13 @@ function ProfileTab({ user, profile, onSave, onSignOut }) {
         <div>
           <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Height (cm)</label>
           <input type="number" style={inp} value={form.height_cm} onChange={e => setForm(f => ({ ...f, height_cm: e.target.value }))} placeholder="170" />
+          {form.height_cm && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>{ftInHint(form.height_cm)}</div>}
         </div>
         {/* Target BMI */}
         <div>
           <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Target BMI</label>
           <input type="number" step="0.1" style={inp} value={form.target_bmi} onChange={e => setForm(f => ({ ...f, target_bmi: e.target.value }))} placeholder="24.9" />
-          {targetKg && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>= {targetKg} kg target weight</div>}
+          {targetKg && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>= {formatWeight(targetKg)} target weight</div>}
         </div>
         {/* Trainer name */}
         <div>
@@ -2231,10 +2235,10 @@ export default function App() {
         {/* WEIGHT & BMI TAB */}
         {tab === "weight" && <>
           <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap" }}>
-            <StatCard label="Current Weight" value={latestW ? `${latestW.kg} kg` : "—"} sub={latestW ? formatDate(latestW.date) : ""} />
+            <StatCard label="Current Weight" value={latestW ? formatWeight(latestW.kg) : "—"} sub={latestW ? formatDate(latestW.date) : ""} />
             <StatCard label="BMI" value={currentBMI || "—"} sub={bmiCat?.label} accent={bmiCat?.color} />
-            <StatCard label="Change" value={weightChange !== null ? `${parseFloat(weightChange) > 0 ? "+" : ""}${weightChange} kg` : "—"} sub={`since ${firstW ? shortDate(firstW.date) : "start"}`} accent={weightChange !== null ? (parseFloat(weightChange) < 0 ? "#C8FF00" : parseFloat(weightChange) > 0 ? "#f87171" : "#fff") : "#fff"} />
-            <StatCard label="To Target" value={toTarget !== null ? `${toTarget} kg` : "—"} sub={`target: ${targetKg} kg (BMI ${targetBMI})`} accent="#facc15" />
+            <StatCard label="Change" value={weightChange !== null ? `${parseFloat(weightChange) > 0 ? "+" : ""}${formatWeight(weightChange)}` : "—"} sub={`since ${firstW ? shortDate(firstW.date) : "start"}`} accent={weightChange !== null ? (parseFloat(weightChange) < 0 ? "#C8FF00" : parseFloat(weightChange) > 0 ? "#f87171" : "#fff") : "#fff"} />
+            <StatCard label="To Target" value={toTarget !== null ? formatWeight(toTarget) : "—"} sub={`target: ${formatWeight(targetKg)} (BMI ${targetBMI})`} accent="#facc15" />
           </div>
 
           {currentBMI && (
@@ -2252,10 +2256,10 @@ export default function App() {
               <div style={{ marginTop: 12, fontSize: 13, color: "rgba(255,255,255,0.6)", fontStyle: "italic", lineHeight: 1.6 }}>
                 Current BMI <span style={{ color: bmiCat.color, fontWeight: "bold" }}>{currentBMI} ({bmiCat.label})</span>.{" "}
                 {parseFloat(toTarget) > 0
-                  ? <>Losing <span style={{ color: "#facc15" }}>{toTarget} kg</span> reaches BMI {targetBMI} at <span style={{ color: "#C8FF00" }}>{targetKg} kg</span>.</>
+                  ? <>Losing <span style={{ color: "#facc15" }}>{formatWeight(toTarget)}</span> reaches BMI {targetBMI} at <span style={{ color: "#C8FF00" }}>{formatWeight(targetKg)}</span>.</>
                   : parseFloat(toTarget) < 0
-                    ? <>Target reached — you're <span style={{ color: "#C8FF00" }}>{Math.abs(toTarget)} kg</span> under your BMI {targetBMI} goal.</>
-                    : <>You're exactly at your BMI {targetBMI} target of <span style={{ color: "#C8FF00" }}>{targetKg} kg</span>.</>
+                    ? <>Target reached — you're <span style={{ color: "#C8FF00" }}>{formatWeight(Math.abs(toTarget))}</span> under your BMI {targetBMI} goal.</>
+                    : <>You're exactly at your BMI {targetBMI} target of <span style={{ color: "#C8FF00" }}>{formatWeight(targetKg)}</span>.</>
                 }
               </div>
             </div>
@@ -2287,6 +2291,7 @@ export default function App() {
               <div style={{ flex: 1, minWidth: 120 }}>
                 <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Weight (kg)</label>
                 <input type="number" step="0.1" placeholder="e.g. 105.5" style={inp} value={newWeight} onChange={e => setNewWeight(e.target.value)} onKeyDown={e => e.key === "Enter" && logWeight()} />
+                {newWeight && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>{lbsHint(newWeight)}</div>}
               </div>
               <div style={{ flex: 1, minWidth: 100 }}>
                 <label style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 6 }}>Body Fat %</label>
@@ -2309,10 +2314,10 @@ export default function App() {
                   <div key={w.date} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 2 }}>
                     <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap", flex: 1 }}>
                       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14 }}>{formatDate(w.date)}</div>
-                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700 }}>{w.kg} kg</div>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700 }}>{formatWeight(w.kg)}</div>
                       <div style={{ fontSize: 12, color: cat.color, fontStyle: "italic" }}>BMI {b} · {cat.label}</div>
                       {w.body_fat_pct != null && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontFamily: "'Barlow Condensed', sans-serif" }}>{w.body_fat_pct}% body fat</div>}
-                      {diff !== null && <div style={{ fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", color: parseFloat(diff) < 0 ? "#C8FF00" : parseFloat(diff) > 0 ? "#f87171" : "rgba(255,255,255,0.3)" }}>{parseFloat(diff) > 0 ? "+" : ""}{diff} kg</div>}
+                      {diff !== null && <div style={{ fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", color: parseFloat(diff) < 0 ? "#C8FF00" : parseFloat(diff) > 0 ? "#f87171" : "rgba(255,255,255,0.3)" }}>{parseFloat(diff) > 0 ? "+" : ""}{formatWeight(diff)}</div>}
                     </div>
                     <button onClick={() => deleteWeight(w.date)} style={{ background: "none", border: "none", color: "rgba(255,80,80,0.4)", cursor: "pointer", fontSize: 16, padding: "0 4px", flexShrink: 0 }}>×</button>
                   </div>
