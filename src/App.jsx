@@ -1241,7 +1241,7 @@ function ProfileTab({ user, profile, onSave, onSignOut, units, setUnits }) {
     setInviteSending(true); setInviteMsg("");
     const { data: { session } } = await supabase.auth.getSession();
     try {
-      const res = await fetch("https://ibiszdvdhffvrissciyj.supabase.co/functions/v1/send-invite", {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
         body: JSON.stringify({ friend_email: inviteEmail, inviter_name: profile?.name }),
@@ -1711,7 +1711,7 @@ function AdminTab({ user }) {
     setInviteSending(true); setInviteMsg("");
     const { data: { session } } = await supabase.auth.getSession();
     try {
-      const res = await fetch("https://ibiszdvdhffvrissciyj.supabase.co/functions/v1/send-invite", {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
         body: JSON.stringify({ friend_email: inviteEmail, inviter_name: user.email, invite_code: inviteCode || "BETA2026" }),

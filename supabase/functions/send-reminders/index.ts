@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
   const resendApiKey   = Deno.env.get("RESEND_API_KEY")!;
   const fromEmail      = Deno.env.get("RESEND_FROM_EMAIL") || "onboarding@resend.dev";
   const appUrl         = "https://fitness.brightpathtechnology.io";
-  const fnBase         = "https://ibiszdvdhffvrissciyj.supabase.co/functions/v1";
+  const fnBase         = `${supabaseUrl}/functions/v1`;
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
