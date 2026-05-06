@@ -2265,18 +2265,34 @@ export default function App() {
 
       {/* Tabs */}
       <div className="tab-bar" style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "0 clamp(16px, 5vw, 40px)" }}>
-        {[
-          ["dashboard", "Dashboard"],
-          ["workouts", "Workouts"],
-          ["weight",   "Weight & BMI"],
-          ["goals",    "Goals"],
-          ["food",     "Food"],
-          ["profile",  "Profile"],
-          ...(user.email === ADMIN_EMAIL ? [["admin", "Admin"]] : []),
-        ].map(([key, label]) => (
+        {(isReadOnly
+          ? [
+              ["dashboard", "Dashboard"],
+              ["workouts",  "Workouts"],
+              ["food",      "Food"],
+            ]
+          : [
+              ["dashboard", "Dashboard"],
+              ["workouts",  "Workouts"],
+              ["weight",    "Weight & BMI"],
+              ["goals",     "Goals"],
+              ["food",      "Food"],
+              ["profile",   "Profile"],
+              ...(user.email === ADMIN_EMAIL ? [["admin", "Admin"]] : []),
+            ]
+        ).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{ background: "none", border: "none", borderBottom: tab === key ? "2px solid #C8FF00" : "2px solid transparent", color: tab === key ? "#C8FF00" : "rgba(255,255,255,0.35)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", padding: "14px 20px 12px", cursor: "pointer", marginBottom: -1 }}>{label}</button>
         ))}
       </div>
+
+      {/* Delegated-view banner */}
+      {isReadOnly && (
+        <div style={{ background: "rgba(200,255,0,0.05)", borderBottom: "1px solid rgba(200,255,0,0.18)", padding: "9px clamp(16px, 5vw, 40px)", display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 3, textTransform: "uppercase" }}>Viewing</span>
+          <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{displayName}'s profile</span>
+          <span style={{ marginLeft: "auto", color: "rgba(255,255,255,0.4)", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 2, padding: "2px 8px" }}>Read only</span>
+        </div>
+      )}
 
       <div style={{ padding: "0 clamp(16px, 5vw, 40px)" }}>
 
