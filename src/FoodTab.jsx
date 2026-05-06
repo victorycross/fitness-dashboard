@@ -376,7 +376,8 @@ function DraggableEntry({ entry, onDelete }) {
 }
 
 /* ── Main component ──────────────────────────────────────────────── */
-export default function FoodTab({ supabase, user, toast }) {
+export default function FoodTab({ supabase, user, viewingUserId, isReadOnly, toast }) {
+  const targetUserId = viewingUserId || user.id;
   const [weekEntries, setWeekEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(todayStr());
@@ -402,8 +403,8 @@ export default function FoodTab({ supabase, user, toast }) {
   const loadWeek = useCallback(async () => {
     setLoading(true);
     const [entriesRes, statusRes] = await Promise.all([
-      supabase.from("food_log").select("*").gte("date", weekStart).lte("date", weekEnd).order("created_at", { ascending: true }),
-      supabase.from("food_day_status").select("date").eq("date", selectedDate).maybeSingle(),
+      supabase.from("food_log").select("*").eq("user_id", targetUserId).gte("date", weekStart).lte("date", weekEnd).order("created_at", { ascending: true }),
+      supabase.from("food_day_status").select("date").eq("user_id", targetUserId).eq("date", selectedDate).maybeSingle(),
     ]);
 
     if (entriesRes.error) {
@@ -537,6 +538,7 @@ export default function FoodTab({ supabase, user, toast }) {
     const { data, error } = await supabase
       .from("food_log")
       .select("*")
+      .eq("user_id", targetUserId)
       .gte("date", start)
       .lte("date", end)
       .order("date", { ascending: true })
@@ -621,6 +623,7 @@ export default function FoodTab({ supabase, user, toast }) {
     const { data, error } = await supabase
       .from("food_log")
       .select("date, calories, protein_g, carbs_g, fat_g")
+      .eq("user_id", targetUserId)
       .gte("date", sinceStr)
       .order("date", { ascending: true });
 
@@ -651,8 +654,8 @@ export default function FoodTab({ supabase, user, toast }) {
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
-        {/* ── Natural language input ──────────────────────────────── */}
-        <div style={card}>
+        {/* ── Natural language input (hidden for delegates) ────────── */}
+        {!isReadOnly && <div style={card}>
           <div style={label}>Log food with AI</div>
           <textarea
             style={{ ...input, minHeight: 60, resize: "vertical", marginBottom: 10 }}
@@ -669,7 +672,7 @@ export default function FoodTab({ supabase, user, toast }) {
           <button style={{ ...btn, opacity: parsing ? 0.6 : 1 }} onClick={handleParse} disabled={parsing}>
             {parsing ? "Parsing…" : "Log Food"}
           </button>
-        </div>
+        </div>}
 
         {/* ── 7-day strip (drop targets) ──────────────────────────── */}
         <div style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -758,7 +761,7 @@ export default function FoodTab({ supabase, user, toast }) {
                     {emailSending === n ? "Sending…" : lbl}
                   </button>
                 ))}
-                <button
+                {!isReadOnly && <button
                   onClick={toggleFinalized}
                   style={{
                     ...btn,
@@ -771,7 +774,7 @@ export default function FoodTab({ supabase, user, toast }) {
                   }}
                 >
                   {finalized ? "Reopen Day" : "Finished for the day"}
-                </button>
+                </button>}
               </div>
             </div>
             <NutritionBar {...totals} />
@@ -799,7 +802,7 @@ export default function FoodTab({ supabase, user, toast }) {
                 <MealColumn
                   meal={meal}
                   entries={entries.filter((e) => (e.meal || "snack") === meal)}
-                  onDelete={handleDelete}
+                  onDelete={isReadOnly ? () => {} : handleDelete}
                 />
               </div>
             ))}

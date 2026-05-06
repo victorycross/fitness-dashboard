@@ -56,13 +56,14 @@ function Sub({ children }) {
   );
 }
 
-export default function DashboardTab({ supabase, user, profile, sessions, weights }) {
+export default function DashboardTab({ supabase, user, profile, sessions, weights, viewingUserId, isReadOnly }) {
   const [todayFood, setTodayFood] = useState(null);
   const [weekCalories, setWeekCalories] = useState([]);
   const [finalized, setFinalized] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const today = localDateStr();
+  const targetUserId = viewingUserId || user.id;
 
   useEffect(() => {
     let cancelled = false;
@@ -74,9 +75,11 @@ export default function DashboardTab({ supabase, user, profile, sessions, weight
       const [foodRes, statusRes] = await Promise.all([
         supabase.from("food_log")
           .select("date, calories, protein_g, carbs_g, fat_g")
+          .eq("user_id", targetUserId)
           .gte("date", sinceStr),
         supabase.from("food_day_status")
           .select("date")
+          .eq("user_id", targetUserId)
           .eq("date", today)
           .maybeSingle(),
       ]);
@@ -110,7 +113,7 @@ export default function DashboardTab({ supabase, user, profile, sessions, weight
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [supabase, today]);
+  }, [supabase, today, targetUserId]);
 
   // ── Weight metrics (from props) ──
   const heightM = profile?.height_cm ? parseFloat(profile.height_cm) / 100 : null;

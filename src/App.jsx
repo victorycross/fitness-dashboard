@@ -1125,6 +1125,81 @@ function _AuthScreen({ onAuth }) {
   );
 }
 
+// ─── Delegation Manager ───────────────────────────────────────────────────────
+function DelegationManager({ user, profile }) {
+  const [delegates, setDelegates]   = useState([]);
+  const [newEmail, setNewEmail]     = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [msg, setMsg]               = useState("");
+
+  const inp = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2, color: "#fff", padding: "8px 12px", fontSize: 13, fontFamily: "Georgia, serif", flex: 1 };
+
+  useEffect(() => {
+    supabase.from("delegations").select("id, delegate_email, delegate_user_id").eq("host_user_id", user.id)
+      .then(({ data }) => setDelegates(data || []));
+  }, [user.id]);
+
+  async function addDelegate() {
+    const email = newEmail.trim().toLowerCase();
+    if (!email || !email.includes("@")) return;
+    if (delegates.some(d => d.delegate_email === email)) {
+      setMsg("Already added."); setTimeout(() => setMsg(""), 3000); return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("delegations").insert({ host_user_id: user.id, delegate_email: email });
+    if (error) { setMsg("Error: " + error.message); setSaving(false); setTimeout(() => setMsg(""), 4000); return; }
+    // Send invite email
+    const { data: { session } } = await supabase.auth.getSession();
+    await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-delegation-invite`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ delegate_email: email, host_name: profile?.name || user.email.split("@")[0] }),
+    }).catch(() => {});
+    setDelegates(d => [...d, { delegate_email: email, delegate_user_id: null }]);
+    setNewEmail("");
+    setMsg("✓ Added and invite sent.");
+    setTimeout(() => setMsg(""), 4000);
+    setSaving(false);
+  }
+
+  async function removeDelegate(email) {
+    await supabase.from("delegations").delete().eq("host_user_id", user.id).eq("delegate_email", email);
+    setDelegates(d => d.filter(x => x.delegate_email !== email));
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <input type="email" style={inp} placeholder="delegate@example.com" value={newEmail}
+          onChange={e => setNewEmail(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && addDelegate()} />
+        <button onClick={addDelegate} disabled={saving || !newEmail}
+          style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "8px 18px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", cursor: (saving || !newEmail) ? "default" : "pointer", opacity: (saving || !newEmail) ? 0.4 : 1, flexShrink: 0 }}>
+          {saving ? "Adding…" : "Add"}
+        </button>
+      </div>
+      {delegates.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
+          {delegates.map(d => (
+            <div key={d.delegate_email} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 2, padding: "8px 12px" }}>
+              <div>
+                <span style={{ fontSize: 13, color: "#fff" }}>{d.delegate_email}</span>
+                <span style={{ marginLeft: 8, fontSize: 11, color: d.delegate_user_id ? "#C8FF00" : "rgba(255,255,255,0.3)", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1 }}>
+                  {d.delegate_user_id ? "Active" : "Pending"}
+                </span>
+              </div>
+              <button onClick={() => removeDelegate(d.delegate_email)}
+                style={{ background: "none", border: "none", color: "rgba(255,80,80,0.5)", cursor: "pointer", fontSize: 16, padding: "0 4px" }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {delegates.length === 0 && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>No delegates yet.</div>}
+      {msg && <div style={{ fontSize: 12, color: msg.startsWith("✓") ? "#C8FF00" : "#f87171", marginTop: 6 }}>{msg}</div>}
+    </div>
+  );
+}
+
 // ─── Profile Tab ──────────────────────────────────────────────────────────────
 function ProfileTab({ user, profile, onSave, onSignOut, units, setUnits }) {
   const [form, setForm] = useState({
@@ -1373,6 +1448,14 @@ function ProfileTab({ user, profile, onSave, onSignOut, units, setUnits }) {
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 8, lineHeight: 1.7 }}>
             Controls the unit you enter values in. Weight and height are always stored and displayed with both units alongside.
           </div>
+        </div>
+        {/* Delegated access */}
+        <div style={{ gridColumn: "1/-1", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginTop: 4 }}>
+          <div style={{ fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>Delegated Access</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.7, marginBottom: 14 }}>
+            Grant someone read-only access to your dashboard. They'll see your workouts, weight, food log, and goals but cannot edit anything.
+          </div>
+          <DelegationManager user={user} profile={profile} />
         </div>
         {/* Food exports */}
         <div style={{ gridColumn: "1/-1", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginTop: 4 }}>
@@ -1850,6 +1933,10 @@ export default function App() {
   const [photos, setPhotos]           = useState([]);
   const [loading, setLoading]         = useState(true);
   const [tab, setTab]                 = useState("dashboard");
+  // Delegation: hosts this user can view as a delegate
+  const [delegatedHosts, setDelegatedHosts] = useState([]); // [{host_user_id, host_name}]
+  const [viewingUserId, setViewingUserId]   = useState(null); // null = own profile
+  const [viewingProfile, setViewingProfile] = useState(null);
   const [activeSession, setActiveSession] = useState(null);
   const [adding, setAdding]           = useState(false);
   const [aiMode, setAiMode]           = useState(false);
@@ -1879,7 +1966,7 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Load profile
+  // Load profile + resolve delegation + load hosts this user can view
   useEffect(() => {
     if (!user) return;
     setProfileLoaded(false);
@@ -1887,32 +1974,71 @@ export default function App() {
       setProfile(data);
       setProfileLoaded(true);
     });
+    // Resolve any pending delegation rows for this email
+    supabase.rpc("resolve_delegation").catch(() => {});
+    // Load hosts this user has been granted access to
+    supabase
+      .from("delegations")
+      .select("host_user_id, profiles!delegations_host_user_id_fkey(name)")
+      .eq("delegate_user_id", user.id)
+      .then(({ data }) => {
+        if (data?.length) {
+          setDelegatedHosts(data.map(d => ({
+            host_user_id: d.host_user_id,
+            host_name: d.profiles?.name || "Unknown",
+          })));
+        }
+      });
   }, [user]);
 
-  // Load data
+  // Load data — switches between own profile and a delegated host profile
   const loadData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    const targetId = viewingUserId || user.id;
     const timeout = setTimeout(() => {
       setLoading(false);
       setError("Loading timed out — check your connection and refresh.");
     }, 10000);
     try {
-      const [{ data: sd, error: se }, { data: wd, error: we }, { data: pd }] = await Promise.all([
-        supabase.from("workout_sessions").select("*").eq("user_id", user.id).order("date", { ascending: false }),
-        supabase.from("weight_log").select("*").eq("user_id", user.id).order("date", { ascending: true }),
-        supabase.from("progress_photos").select("*").eq("user_id", user.id).order("date", { ascending: true }),
-      ]);
+      const queries = [
+        supabase.from("workout_sessions").select("*").eq("user_id", targetId).order("date", { ascending: false }),
+        supabase.from("weight_log").select("*").eq("user_id", targetId).order("date", { ascending: true }),
+        supabase.from("progress_photos").select("*").eq("user_id", targetId).order("date", { ascending: true }),
+      ];
+      // If viewing a host, also load their profile
+      if (viewingUserId && viewingUserId !== user.id) {
+        queries.push(supabase.from("profiles").select("*").eq("id", viewingUserId).single());
+      }
+      const results = await Promise.all(queries);
+      const [{ data: sd, error: se }, { data: wd, error: we }, { data: pd }] = results;
       clearTimeout(timeout);
       if (se) throw se; if (we) throw we;
       setSessions(sd || []); setWeights(wd || []); setPhotos(pd || []);
+      if (viewingUserId && viewingUserId !== user.id && results[3]) {
+        setViewingProfile(results[3].data);
+      }
     } catch (e) { clearTimeout(timeout); setError("Failed to load: " + e.message); }
     finally { setLoading(false); }
-  }, [user]);
+  }, [user, viewingUserId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   function showToast(m) { setToast(m); setTimeout(() => setToast(""), 2500); }
+
+  function switchToHost(hostUserId) {
+    setViewingUserId(hostUserId);
+    setViewingProfile(null);
+    setTab("dashboard");
+  }
+
+  function switchToSelf() {
+    setViewingUserId(null);
+    setViewingProfile(null);
+    setTab("dashboard");
+  }
+
+  const isReadOnly = !!(viewingUserId && viewingUserId !== user?.id);
 
   // Calorie recalculation
   async function recalcAllCalories() {
@@ -2060,9 +2186,10 @@ export default function App() {
   );
   if (loading) return loadingScreen;
 
-  const displayName = profile?.name || user.email.split("@")[0];
-  const trainerName = profile?.trainer_name || null;
-  const primaryLocation = profile?.workout_locations?.[0]?.label || null;
+  const activeProfile = isReadOnly ? viewingProfile : profile;
+  const displayName = activeProfile?.name || (isReadOnly ? "Host" : user.email.split("@")[0]);
+  const trainerName = activeProfile?.trainer_name || null;
+  const primaryLocation = activeProfile?.workout_locations?.[0]?.label || null;
 
   return (
     <div style={{ minHeight: "100vh", background: "#0e0e0e", color: "#fff", fontFamily: "Georgia, serif", paddingBottom: 80 }}>
@@ -2085,6 +2212,31 @@ export default function App() {
               {[primaryLocation, trainerName ? `Trainer: ${trainerName}` : null].filter(Boolean).join(" · ")}
             </div>
           )}
+          {/* Profile switcher */}
+          {(delegatedHosts.length > 0 || isReadOnly) && (
+            <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
+              <button
+                onClick={switchToSelf}
+                style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", padding: "5px 12px", borderRadius: 20, border: `1px solid ${!isReadOnly ? "#C8FF00" : "rgba(255,255,255,0.2)"}`, background: !isReadOnly ? "rgba(200,255,0,0.1)" : "transparent", color: !isReadOnly ? "#C8FF00" : "rgba(255,255,255,0.4)", cursor: "pointer" }}
+              >
+                My Profile
+              </button>
+              {delegatedHosts.map(h => (
+                <button
+                  key={h.host_user_id}
+                  onClick={() => switchToHost(h.host_user_id)}
+                  style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", padding: "5px 12px", borderRadius: 20, border: `1px solid ${viewingUserId === h.host_user_id ? "#C8FF00" : "rgba(255,255,255,0.2)"}`, background: viewingUserId === h.host_user_id ? "rgba(200,255,0,0.1)" : "transparent", color: viewingUserId === h.host_user_id ? "#C8FF00" : "rgba(255,255,255,0.4)", cursor: "pointer" }}
+                >
+                  {h.host_name}'s View
+                </button>
+              ))}
+            </div>
+          )}
+          {isReadOnly && (
+            <div style={{ marginTop: 8, fontSize: 11, color: "rgba(255,255,255,0.35)", fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 1 }}>
+              Read-only view
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
           {/* Avatar */}
@@ -2094,7 +2246,7 @@ export default function App() {
               : <div style={{ color: "#C8FF00", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700 }}>{displayName[0].toUpperCase()}</div>
             }
           </div>
-          {tab === "workouts" ? (
+          {tab === "workouts" && !isReadOnly ? (
             <button onClick={() => { setAdding(true); setActiveSession(null); }} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "12px 24px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>
               + Log Session
             </button>
@@ -2123,7 +2275,7 @@ export default function App() {
 
         {/* DASHBOARD TAB */}
         {tab === "dashboard" && (
-          <DashboardTab supabase={supabase} user={user} profile={profile} sessions={sessions} weights={weights} />
+          <DashboardTab supabase={supabase} user={user} profile={activeProfile} sessions={sessions} weights={weights} viewingUserId={viewingUserId || user.id} isReadOnly={isReadOnly} />
         )}
 
         {/* WORKOUTS TAB */}
@@ -2138,7 +2290,7 @@ export default function App() {
             <button onClick={recalcAllCalories} style={{ background: "none", border: "1px solid rgba(200,255,0,0.2)", borderRadius: 2, color: "rgba(200,255,0,0.6)", padding: "6px 16px", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>Recalculate Calories</button>
           </div>
 
-          {adding && (
+          {adding && !isReadOnly && (
             <div style={{ marginTop: 32, background: "rgba(200,255,0,0.04)", border: "1px solid rgba(200,255,0,0.2)", borderRadius: 2, padding: 28 }}>
               {/* Header */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
@@ -2299,7 +2451,7 @@ export default function App() {
             )}
           </div>
 
-          <div style={{ marginTop: 20, background: "rgba(200,255,0,0.04)", border: "1px solid rgba(200,255,0,0.15)", borderRadius: 2, padding: 24 }}>
+          {!isReadOnly && <div style={{ marginTop: 20, background: "rgba(200,255,0,0.04)", border: "1px solid rgba(200,255,0,0.15)", borderRadius: 2, padding: 24 }}>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 16, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16, color: "#C8FF00" }}>Log Weight</div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
               <div style={{ flex: 1, minWidth: 140 }}>
@@ -2316,7 +2468,7 @@ export default function App() {
               </div>
               <button onClick={logWeight} style={{ background: "#C8FF00", color: "#0e0e0e", border: "none", borderRadius: 2, padding: "9px 22px", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", height: 38, flexShrink: 0 }}>Save</button>
             </div>
-          </div>
+          </div>}
 
           <div style={{ marginTop: 20 }}>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>History</div>
@@ -2346,14 +2498,14 @@ export default function App() {
 
         {/* GOALS TAB */}
         {tab === "goals" && (
-          <GoalsTab user={user} profile={profile} weights={weights} sessions={sessions}
-            photos={photos} onProfileUpdate={updates => setProfile(p => ({ ...p, ...updates }))}
-            onPhotosChange={loadData} />
+          <GoalsTab user={user} profile={activeProfile} weights={weights} sessions={sessions}
+            photos={photos} onProfileUpdate={updates => !isReadOnly && setProfile(p => ({ ...p, ...updates }))}
+            onPhotosChange={!isReadOnly ? loadData : () => {}} />
         )}
 
         {/* FOOD TAB */}
         {tab === "food" && (
-          <FoodTab supabase={supabase} user={user} toast={msg => { setToast(msg); setTimeout(() => setToast(""), 2500); }} />
+          <FoodTab supabase={supabase} user={user} viewingUserId={viewingUserId || user.id} isReadOnly={isReadOnly} toast={msg => { setToast(msg); setTimeout(() => setToast(""), 2500); }} />
         )}
 
         {/* PROFILE TAB */}
