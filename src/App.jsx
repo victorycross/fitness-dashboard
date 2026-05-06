@@ -1961,7 +1961,11 @@ export default function App() {
       setAuthLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      setUser(prev => {
+        const next = session?.user ?? null;
+        if (prev?.id === next?.id) return prev;
+        return next;
+      });
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -1993,7 +1997,7 @@ export default function App() {
           host_name: profileData?.find(p => p.id === id)?.name || "Unknown",
         })));
       });
-  }, [user]);
+  }, [user?.id]);
 
   // Load data — switches between own profile and a delegated host profile
   const loadData = useCallback(async () => {
@@ -2024,7 +2028,7 @@ export default function App() {
       }
     } catch (e) { clearTimeout(timeout); setError("Failed to load: " + e.message); }
     finally { setLoading(false); }
-  }, [user, viewingUserId]);
+  }, [user?.id, viewingUserId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
