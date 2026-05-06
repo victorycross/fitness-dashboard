@@ -503,6 +503,32 @@ export default function FoodTab({ supabase, user, toast }) {
     setParsing(false);
   }
 
+  /* ── Email export for a day / week / month ending on selectedDate ─ */
+  const [emailSending, setEmailSending] = useState(false);
+
+  async function emailExport(days) {
+    if (emailSending) return;
+    setEmailSending(days);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke("send-food-export-manual", {
+        body: { days, end_date: selectedDate },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (res.error) throw new Error(res.error.message);
+      const result = res.data;
+      if (result?.entry_count === 0) {
+        toast?.(`No entries to email for that period.`);
+      } else {
+        toast?.(`Food log emailed to ${result?.recipient} (${result?.entry_count} entries).`);
+      }
+    } catch (err) {
+      toast?.("Email failed — " + (err.message || "try again."));
+    } finally {
+      setEmailSending(false);
+    }
+  }
+
   /* ── Export text for a day / week / month ending on selectedDate ─ */
   async function exportText(days) {
     const end = selectedDate;
@@ -685,7 +711,7 @@ export default function FoodTab({ supabase, user, toast }) {
                 {finalized && <span style={{ color: ACCENT, marginLeft: 8 }}>· Finished ✓</span>}
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                <span style={{ fontSize: 11, color: DIM, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2, textTransform: "uppercase" }}>Export:</span>
+                <span style={{ fontSize: 11, color: DIM, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2, textTransform: "uppercase" }}>Download:</span>
                 {[
                   ["Day", 1],
                   ["Week", 7],
@@ -705,6 +731,31 @@ export default function FoodTab({ supabase, user, toast }) {
                     title={`Download last ${n} day${n === 1 ? "" : "s"} as text`}
                   >
                     {lbl}
+                  </button>
+                ))}
+                <span style={{ fontSize: 11, color: DIM, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: 2, textTransform: "uppercase", marginLeft: 8 }}>Email:</span>
+                {[
+                  ["Day", 1],
+                  ["Week", 7],
+                  ["Month", 30],
+                ].map(([lbl, n]) => (
+                  <button
+                    key={`email-${lbl}`}
+                    onClick={() => emailExport(n)}
+                    disabled={emailSending !== false}
+                    style={{
+                      ...btn,
+                      background: "transparent",
+                      color: emailSending === n ? DIM : ACCENT,
+                      border: `1px solid ${emailSending === n ? DIM : ACCENT}`,
+                      padding: "6px 12px",
+                      fontSize: 12,
+                      opacity: emailSending !== false && emailSending !== n ? 0.4 : 1,
+                      cursor: emailSending !== false ? "default" : "pointer",
+                    }}
+                    title={`Email last ${n} day${n === 1 ? "" : "s"} to your account`}
+                  >
+                    {emailSending === n ? "Sending…" : lbl}
                   </button>
                 ))}
                 <button
