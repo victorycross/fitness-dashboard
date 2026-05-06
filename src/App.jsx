@@ -1979,15 +1979,19 @@ export default function App() {
     // Load hosts this user has been granted access to
     supabase
       .from("delegations")
-      .select("host_user_id, profiles!delegations_host_user_id_fkey(name)")
+      .select("host_user_id")
       .eq("delegate_user_id", user.id)
-      .then(({ data }) => {
-        if (data?.length) {
-          setDelegatedHosts(data.map(d => ({
-            host_user_id: d.host_user_id,
-            host_name: d.profiles?.name || "Unknown",
-          })));
-        }
+      .then(async ({ data }) => {
+        if (!data?.length) return;
+        const hostIds = data.map(d => d.host_user_id);
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", hostIds);
+        setDelegatedHosts(hostIds.map(id => ({
+          host_user_id: id,
+          host_name: profileData?.find(p => p.id === id)?.name || "Unknown",
+        })));
       });
   }, [user]);
 
