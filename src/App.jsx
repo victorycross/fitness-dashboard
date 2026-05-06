@@ -1961,11 +1961,7 @@ export default function App() {
       setAuthLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(prev => {
-        const next = session?.user ?? null;
-        if (prev?.id === next?.id) return prev;
-        return next;
-      });
+      setUser(session?.user ?? null);
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -1979,7 +1975,10 @@ export default function App() {
       setProfileLoaded(true);
     });
     // Resolve any pending delegation rows for this email
-    supabase.rpc("resolve_delegation").catch(() => {});
+    supabase.rpc("resolve_delegation").then(
+      ({ error }) => { if (error) console.warn("resolve_delegation:", error); },
+      () => {}
+    );
     // Load hosts this user has been granted access to
     supabase
       .from("delegations")
